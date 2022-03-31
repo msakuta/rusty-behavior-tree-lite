@@ -1,10 +1,11 @@
-use ::behavior_tree_lite::{BehaviorNode, BehaviorResult, Context, SequenceNode};
-use std::any::TypeId;
+use ::behavior_tree_lite::{hash_map, BehaviorNode, BehaviorResult, Context, SequenceNode};
 
+#[derive(Clone, Debug)]
 struct Arm {
     name: String,
 }
 
+#[derive(Debug)]
 struct Body {
     left_arm: Arm,
     right_arm: Arm,
@@ -14,11 +15,10 @@ struct PrintArmNode;
 
 impl BehaviorNode for PrintArmNode {
     fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
-        let id = TypeId::of::<Arm>();
-        println!("Arm {:?}", id);
+        println!("Arm {:?}", ctx);
 
-        if let Some(arm) = ctx.get::<String>("left") {
-            println!("Got {}", arm);
+        if let Some(arm) = ctx.get::<Arm>("arm") {
+            println!("Got {}", arm.name);
         }
         BehaviorResult::Success
     }
@@ -28,26 +28,41 @@ struct PrintBodyNode;
 
 impl BehaviorNode for PrintBodyNode {
     fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
-        println!("Body");
-        if let Some(body) = ctx.get::<String>("body").cloned() {
-            ctx.set("left".to_string(), format!("{}'s left_arm", body));
-            ctx.set("right".to_string(), format!("{}'s left_arm", body));
+        if let Some(body) = ctx.get::<Body>("body") {
+            let left_arm = body.left_arm.clone();
+            let right_arm = body.right_arm.clone();
+            println!("Got Body: {:?}", body);
+            ctx.set("left_arm", left_arm);
+            ctx.set("right_arm", right_arm);
+            BehaviorResult::Success
+        } else {
+            BehaviorResult::Fail
         }
-        BehaviorResult::Success
     }
 }
 
-fn main(){
+fn main() {
+    let body = Body {
+        left_arm: Arm {
+            name: "left_arm".to_string(),
+        },
+        right_arm: Arm {
+            name: "right_arm".to_string(),
+        },
+    };
+
     let mut ctx = Context::default();
+    ctx.set("body", body);
 
     let mut root = SequenceNode::default();
 
-    root.add_child(PrintBodyNode);
+    root.add_child(PrintBodyNode, hash_map!());
 
     let mut print_arms = SequenceNode::default();
-    print_arms.add_child(PrintArmNode);
+    print_arms.add_child(PrintArmNode, hash_map!("arm" => "left_arm"));
+    print_arms.add_child(PrintArmNode, hash_map!("arm" => "right_arm"));
 
-    print_arms.tick(&mut ctx);
+    root.add_child(print_arms, hash_map!());
 
-    root.add_child(print_arms);
+    root.tick(&mut ctx);
 }
