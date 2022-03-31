@@ -95,12 +95,12 @@ impl BehaviorNode for FallbackNode {
     fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
         for node in &mut self.children {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-            if node.node.tick(ctx) == BehaviorResult::Fail {
+            if node.node.tick(ctx) == BehaviorResult::Success {
                 std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-                return BehaviorResult::Fail;
+                return BehaviorResult::Success;
             }
         }
-        BehaviorResult::Success
+        BehaviorResult::Fail
     }
 }
 

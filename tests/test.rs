@@ -1,5 +1,7 @@
 // use std::convert::From;
-use behavior_tree_lite::{hash_map, BehaviorNode, BehaviorResult, Context, SequenceNode};
+use behavior_tree_lite::{
+    hash_map, BehaviorNode, BehaviorResult, Context, FallbackNode, SequenceNode,
+};
 
 struct CheckMeNode;
 
@@ -42,4 +44,14 @@ fn test_sequence() {
     assert_eq!(seq.tick(&mut Context::default()), BehaviorResult::Success);
     seq.add_child(AlwaysFail, hash_map!());
     assert_eq!(seq.tick(&mut Context::default()), BehaviorResult::Fail);
+}
+
+#[test]
+fn test_fallback() {
+    let mut seq = FallbackNode::default();
+    seq.add_child(AlwaysFail, hash_map!());
+    seq.add_child(AlwaysFail, hash_map!());
+    assert_eq!(seq.tick(&mut Context::default()), BehaviorResult::Fail);
+    seq.add_child(AlwaysSucceed, hash_map!());
+    assert_eq!(seq.tick(&mut Context::default()), BehaviorResult::Success);
 }
