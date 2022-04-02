@@ -1,4 +1,8 @@
+mod parser;
+
 use std::collections::HashMap;
+
+pub use crate::parser::{load_yaml, Constructor, Registry};
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum BehaviorResult {
@@ -35,6 +39,9 @@ impl Context {
 
 pub trait BehaviorNode {
     fn tick(&mut self, ctx: &mut Context) -> BehaviorResult;
+
+    fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: HashMap<String, String>) {
+    }
 }
 
 pub struct BehaviorNodeContainer {
@@ -45,19 +52,6 @@ pub struct BehaviorNodeContainer {
 #[derive(Default)]
 pub struct SequenceNode {
     children: Vec<BehaviorNodeContainer>,
-}
-
-impl SequenceNode {
-    pub fn add_child<T: BehaviorNode + 'static>(
-        &mut self,
-        val: T,
-        blackboard_map: HashMap<String, String>,
-    ) {
-        self.children.push(BehaviorNodeContainer {
-            node: Box::new(val),
-            blackboard_map,
-        });
-    }
 }
 
 impl BehaviorNode for SequenceNode {
@@ -71,24 +65,18 @@ impl BehaviorNode for SequenceNode {
         }
         BehaviorResult::Success
     }
+
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: HashMap<String, String>) {
+        self.children.push(BehaviorNodeContainer {
+            node,
+            blackboard_map,
+        });
+    }
 }
 
 #[derive(Default)]
 pub struct FallbackNode {
     children: Vec<BehaviorNodeContainer>,
-}
-
-impl FallbackNode {
-    pub fn add_child<T: BehaviorNode + 'static>(
-        &mut self,
-        val: T,
-        blackboard_map: HashMap<String, String>,
-    ) {
-        self.children.push(BehaviorNodeContainer {
-            node: Box::new(val),
-            blackboard_map,
-        });
-    }
 }
 
 impl BehaviorNode for FallbackNode {
@@ -101,6 +89,13 @@ impl BehaviorNode for FallbackNode {
             }
         }
         BehaviorResult::Fail
+    }
+
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: HashMap<String, String>) {
+        self.children.push(BehaviorNodeContainer {
+            node,
+            blackboard_map,
+        });
     }
 }
 

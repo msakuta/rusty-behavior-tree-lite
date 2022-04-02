@@ -56,13 +56,13 @@ fn main() {
 
     let mut root = SequenceNode::default();
 
-    root.add_child(PrintBodyNode, hash_map!());
+    root.add_child(Box::new(PrintBodyNode), hash_map!());
 
     let mut print_arms = SequenceNode::default();
-    print_arms.add_child(PrintArmNode, hash_map!("arm" => "left_arm"));
-    print_arms.add_child(PrintArmNode, hash_map!("arm" => "right_arm"));
+    print_arms.add_child(Box::new(PrintArmNode), hash_map!("arm" => "left_arm"));
+    print_arms.add_child(Box::new(PrintArmNode), hash_map!("arm" => "right_arm"));
 
-    root.add_child(print_arms, hash_map!());
+    root.add_child(Box::new(print_arms), hash_map!());
 
     root.tick(&mut ctx);
 }
