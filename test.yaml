@@ -1,0 +1,22 @@
+
+nodes:
+  PrintArmNode:
+    input_ports:
+      arm: Arm
+  PrintBodyNode:
+    output_nodes:
+      left_arm: Arm
+      right_arm: Arm
+
+behavior_tree:
+  type: Sequence
+  children:
+  - type: PrintBodyNode
+  - type: Sequence
+    children:
+    - type: PrintArmNode
+      ports:
+        arm: left_arm
+    - type: PrintArmNode
+      ports:
+        arm: right_arm

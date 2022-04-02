@@ -52,7 +52,7 @@ impl Registry {
 fn recurse_parse(
     value: &serde_yaml::Value,
     reg: &Registry,
-) -> serde_yaml::Result<Option<Box<dyn BehaviorNode>>> {
+) -> serde_yaml::Result<Option<(Box<dyn BehaviorNode>, HashMap<String, String>)>> {
     let mut node = if let Some(node) = value
         .get(&Value::from("type"))
         .and_then(|value| value.as_str())
@@ -66,12 +66,25 @@ fn recurse_parse(
     if let Some(Value::Sequence(children)) = value.get(&Value::from("children")) {
         for child in children {
             if let Some(built_child) = recurse_parse(child, reg)? {
-                node.add_child(built_child, HashMap::new());
+                node.add_child(built_child.0, built_child.1);
             }
         }
     }
 
-    Ok(Some(node))
+    let blackboard_map = if let Some(Value::Mapping(ports)) = value.get(&Value::from("ports")) {
+        ports
+            .iter()
+            .filter_map(|(key, value)| {
+                key.as_str()
+                    .zip(value.as_str())
+                    .map(|(key, value)| (key.to_string(), value.to_string()))
+            })
+            .collect()
+    } else {
+        HashMap::new()
+    };
+
+    Ok(Some((node, blackboard_map)))
 }
 
 pub fn load_yaml(yaml: &str, reg: &Registry) -> serde_yaml::Result<Option<Box<dyn BehaviorNode>>> {
@@ -86,7 +99,7 @@ pub fn load_yaml(yaml: &str, reg: &Registry) -> serde_yaml::Result<Option<Box<dy
         // }
 
         if let Some(root) = root.get(&Value::from("behavior_tree")) {
-            return Ok(recurse_parse(root, reg)?);
+            return Ok(recurse_parse(root, reg)?.map(|v| v.0));
         }
     }
 
