@@ -15,13 +15,23 @@ struct Body {
     right_arm: Arm,
 }
 
-struct PrintArmNode;
+struct PrintArmNode {
+    arm_sym: Symbol,
+}
+
+impl PrintArmNode {
+    fn new() -> Self {
+        Self {
+            arm_sym: "arm".into(),
+        }
+    }
+}
 
 impl BehaviorNode for PrintArmNode {
     fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
         println!("Arm {:?}", ctx);
 
-        if let Some(arm) = ctx.get::<Arm>(Symbol::from("arm")) {
+        if let Some(arm) = ctx.get::<Arm>(self.arm_sym) {
             println!("Got {}", arm.name);
         }
         BehaviorResult::Success
@@ -29,25 +39,29 @@ impl BehaviorNode for PrintArmNode {
 }
 
 struct PrintBodyNode {
+    body_sym: Symbol,
     left_arm_sym: Symbol,
+    right_arm_sym: Symbol,
 }
 
 impl PrintBodyNode {
     fn new() -> Self {
         Self {
+            body_sym: "body".into(),
             left_arm_sym: "left_arm".into(),
+            right_arm_sym: "right_arm".into(),
         }
     }
 }
 
 impl BehaviorNode for PrintBodyNode {
     fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
-        if let Some(body) = ctx.get::<Body>("body".into()) {
+        if let Some(body) = ctx.get::<Body>(self.body_sym) {
             let left_arm = body.left_arm.clone();
             let right_arm = body.right_arm.clone();
             println!("Got Body: {:?}", body);
-            ctx.set("left_arm".into(), left_arm);
-            ctx.set("right_arm".into(), right_arm);
+            ctx.set(self.left_arm_sym, left_arm);
+            ctx.set(self.right_arm_sym, right_arm);
             BehaviorResult::Success
         } else {
             println!("No body!");
@@ -60,7 +74,7 @@ struct PrintArmNodeConstructor;
 
 impl Constructor for PrintArmNodeConstructor {
     fn build(&self) -> Box<dyn BehaviorNode> {
-        Box::new(PrintArmNode)
+        Box::new(PrintArmNode::new())
     }
 }
 
@@ -99,7 +113,7 @@ fn main() -> anyhow::Result<()> {
         };
 
         let mut ctx = Context::default();
-        ctx.set("body", body);
+        ctx.set("body".into(), body);
 
         let result = main.tick(&mut ctx);
 
