@@ -9,14 +9,15 @@ nodes:
       right_arm: Arm
 
 behavior_tree:
-  type: Sequence
-  children:
-  - type: PrintBodyNode
-  - type: Sequence
+  main:
+    type: Sequence
     children:
-    - type: PrintArmNode
-      ports:
-        arm: left_arm
-    - type: PrintArmNode
-      ports:
-        arm: right_arm
+    - type: PrintBodyNode
+    - type: Sequence
+      children:
+      - type: PrintArmNode
+        ports:
+          arm: left_arm
+      - type: PrintArmNode
+        ports:
+          arm: right_arm

@@ -1,4 +1,4 @@
-use crate::{BehaviorNode, FallbackNode, SequenceNode};
+use crate::{error::Error, BehaviorNode, FallbackNode, SequenceNode};
 use serde_yaml::Value;
 use std::collections::HashMap;
 
@@ -87,7 +87,10 @@ fn recurse_parse(
     Ok(Some((node, blackboard_map)))
 }
 
-pub fn load_yaml(yaml: &str, reg: &Registry) -> serde_yaml::Result<Option<Box<dyn BehaviorNode>>> {
+pub fn load_yaml(
+    yaml: &str,
+    reg: &Registry,
+) -> Result<HashMap<String, Box<dyn BehaviorNode>>, Error> {
     let yaml = serde_yaml::from_str(yaml)?;
     if let Value::Mapping(root) = yaml {
         // if let Some(Value::Mapping(nodes)) = root.get(&Value::from("nodes")) {
@@ -98,10 +101,20 @@ pub fn load_yaml(yaml: &str, reg: &Registry) -> serde_yaml::Result<Option<Box<dy
         //     }
         // }
 
-        if let Some(root) = root.get(&Value::from("behavior_tree")) {
-            return Ok(recurse_parse(root, reg)?.map(|v| v.0));
+        if let Some(Value::Mapping(roots)) = root.get(&Value::from("behavior_tree")) {
+            return Ok(roots
+                .iter()
+                .map(|(name, value)| {
+                    Ok((
+                        name.as_str().ok_or(Error::Missing)?.to_string(),
+                        recurse_parse(value, reg)?
+                            .map(|v| v.0)
+                            .ok_or_else(|| Error::Missing)?,
+                    ))
+                })
+                .collect::<Result<_, Error>>()?);
         }
     }
 
-    Ok(None)
+    Err(Error::Missing)
 }

@@ -8,3 +8,6 @@ edition = "2018"
 [dependencies]
 serde = "1.0.136"
 serde_yaml = "0.8.23"
+
+[dev-dependencies]
+anyhow = "1.0.57"

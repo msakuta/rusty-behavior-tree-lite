@@ -61,14 +61,14 @@ impl Constructor for PrintBodyNodeConstructor {
     }
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> anyhow::Result<()> {
     let mut registry = Registry::default();
     registry.register("PrintArmNode", Box::new(PrintArmNodeConstructor));
     registry.register("PrintBodyNode", Box::new(PrintBodyNodeConstructor));
     let file = String::from_utf8(fs::read("test.yaml")?).unwrap();
-    if let Some(mut tree) = load_yaml(&file, &registry)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?
-    {
+    let mut trees = load_yaml(&file, &registry)?;
+
+    if let Some(main) = trees.get_mut("main") {
         let body = Body {
             left_arm: Arm {
                 name: "left_arm".to_string(),
@@ -81,7 +81,9 @@ fn main() -> std::io::Result<()> {
         let mut ctx = Context::default();
         ctx.set("body", body);
 
-        tree.tick(&mut ctx);
+        let result = main.tick(&mut ctx);
+
+        eprintln!("result: {:?}", result);
     }
 
     Ok(())
