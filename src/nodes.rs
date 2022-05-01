@@ -1,5 +1,6 @@
 use crate::{BehaviorNode, BehaviorNodeContainer, BehaviorResult, Context};
 use std::collections::HashMap;
+use symbol::Symbol;
 
 #[derive(Default)]
 pub struct SequenceNode {
@@ -18,7 +19,7 @@ impl BehaviorNode for SequenceNode {
         BehaviorResult::Success
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: HashMap<String, String>) {
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: HashMap<Symbol, Symbol>) {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,
@@ -43,7 +44,7 @@ impl BehaviorNode for FallbackNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: HashMap<String, String>) {
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: HashMap<Symbol, Symbol>) {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,

@@ -1,6 +1,7 @@
 use crate::{error::Error, BehaviorNode, FallbackNode, SequenceNode};
 use serde_yaml::Value;
 use std::collections::HashMap;
+use symbol::Symbol;
 
 pub trait Constructor {
     fn build(&self) -> Box<dyn BehaviorNode>;
@@ -8,6 +9,7 @@ pub trait Constructor {
 
 pub struct Registry {
     node_types: HashMap<String, Box<dyn Constructor>>,
+    key_names: HashMap<String, Symbol>,
 }
 
 struct SequenceConstructor;
@@ -30,6 +32,7 @@ impl Default for Registry {
     fn default() -> Self {
         let mut ret = Self {
             node_types: HashMap::new(),
+            key_names: HashMap::new(),
         };
         ret.register("Sequence", Box::new(SequenceConstructor));
         ret.register("Fallback", Box::new(FallbackConstructor));
@@ -52,14 +55,18 @@ impl Registry {
 fn recurse_parse(
     value: &serde_yaml::Value,
     reg: &Registry,
-) -> serde_yaml::Result<Option<(Box<dyn BehaviorNode>, HashMap<String, String>)>> {
-    let mut node = if let Some(node) = value
-        .get(&Value::from("type"))
-        .and_then(|value| value.as_str())
-        .and_then(|value| reg.build(value))
-    {
+) -> serde_yaml::Result<Option<(Box<dyn BehaviorNode>, HashMap<Symbol, Symbol>)>> {
+    let mut node = if let Some(node) =
+        value
+            .get("type")
+            .and_then(|value| value.as_str())
+            .and_then(|value| {
+                eprintln!("Returning {}", value);
+                reg.build(value)
+            }) {
         node
     } else {
+        eprintln!("Type does not exist in value {:?}", value);
         return Ok(None);
     };
 
@@ -75,9 +82,9 @@ fn recurse_parse(
         ports
             .iter()
             .filter_map(|(key, value)| {
-                key.as_str()
-                    .zip(value.as_str())
-                    .map(|(key, value)| (key.to_string(), value.to_string()))
+                key.as_str().zip(value.as_str()).and_then(|(key, value)| {
+                    Some((*reg.key_names.get(key)?, *reg.key_names.get(value)?))
+                })
             })
             .collect()
     } else {

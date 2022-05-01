@@ -3,6 +3,7 @@ mod nodes;
 mod parser;
 
 use std::collections::HashMap;
+use symbol::Symbol;
 
 pub use crate::nodes::{FallbackNode, SequenceNode};
 pub use crate::parser::{load_yaml, Constructor, Registry};
@@ -15,17 +16,14 @@ pub enum BehaviorResult {
 
 #[derive(Default, Debug)]
 pub struct Context {
-    blackboard: HashMap<String, Box<dyn std::any::Any>>,
-    blackboard_map: HashMap<String, String>,
+    blackboard: HashMap<Symbol, Box<dyn std::any::Any>>,
+    blackboard_map: HashMap<Symbol, Symbol>,
 }
 
 impl Context {
-    pub fn get<'a, T: 'static>(&'a self, key: &str) -> Option<&'a T> {
-        let mapped = self
-            .blackboard_map
-            .get(key)
-            .map(|key| key as &str)
-            .unwrap_or(key);
+    pub fn get<'a, T: 'static>(&'a self, key: Symbol) -> Option<&'a T> {
+        let key: Symbol = key.into();
+        let mapped = self.blackboard_map.get(&key).map(|key| key).unwrap_or(&key);
         // println!("mapped: {:?}", mapped);
         self.blackboard.get(mapped).and_then(|val| {
             // println!("val: {:?}", val);
@@ -33,8 +31,7 @@ impl Context {
         })
     }
 
-    pub fn set<S: ToString, T: 'static>(&mut self, key: S, val: T) {
-        let key = key.to_string();
+    pub fn set<T: 'static>(&mut self, key: Symbol, val: T) {
         let mapped = self.blackboard_map.get(&key).cloned().unwrap_or(key);
         self.blackboard.insert(mapped, Box::new(val));
     }
@@ -43,13 +40,13 @@ impl Context {
 pub trait BehaviorNode {
     fn tick(&mut self, ctx: &mut Context) -> BehaviorResult;
 
-    fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: HashMap<String, String>) {
+    fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: HashMap<Symbol, Symbol>) {
     }
 }
 
 pub struct BehaviorNodeContainer {
     node: Box<dyn BehaviorNode>,
-    blackboard_map: HashMap<String, String>,
+    blackboard_map: HashMap<Symbol, Symbol>,
 }
 
 #[macro_export]
@@ -59,7 +56,7 @@ macro_rules! hash_map {
     };
     ($name: literal => $val: expr) => {{
         let mut ret = std::collections::HashMap::default();
-        ret.insert($name.to_string(), $val.to_string());
+        ret.insert($name.into(), $val.into());
         ret
     }};
 }

@@ -1,4 +1,5 @@
 use ::behavior_tree_lite::{hash_map, BehaviorNode, BehaviorResult, Context, SequenceNode};
+use ::symbol::Symbol;
 
 #[derive(Clone, Debug)]
 struct Arm {
@@ -17,7 +18,7 @@ impl BehaviorNode for PrintArmNode {
     fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
         println!("Arm {:?}", ctx);
 
-        if let Some(arm) = ctx.get::<Arm>("arm") {
+        if let Some(arm) = ctx.get::<Arm>("arm".into()) {
             println!("Got {}", arm.name);
         }
         BehaviorResult::Success
@@ -28,12 +29,12 @@ struct PrintBodyNode;
 
 impl BehaviorNode for PrintBodyNode {
     fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
-        if let Some(body) = ctx.get::<Body>("body") {
+        if let Some(body) = ctx.get::<Body>(Symbol::from("body")) {
             let left_arm = body.left_arm.clone();
             let right_arm = body.right_arm.clone();
             println!("Got Body: {:?}", body);
-            ctx.set("left_arm", left_arm);
-            ctx.set("right_arm", right_arm);
+            ctx.set("left_arm".into(), left_arm);
+            ctx.set("right_arm".into(), right_arm);
             BehaviorResult::Success
         } else {
             BehaviorResult::Fail
@@ -52,7 +53,7 @@ fn main() {
     };
 
     let mut ctx = Context::default();
-    ctx.set("body", body);
+    ctx.set("body".into(), body);
 
     let mut root = SequenceNode::default();
 

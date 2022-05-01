@@ -2,12 +2,13 @@
 use behavior_tree_lite::{
     hash_map, BehaviorNode, BehaviorResult, Context, FallbackNode, SequenceNode,
 };
+use symbol::Symbol;
 
 struct CheckMeNode;
 
 impl BehaviorNode for CheckMeNode {
     fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
-        assert_eq!(Some(&"check me"), ctx.get::<&str>("check"));
+        assert_eq!(Some(&"check me"), ctx.get(Symbol::from("check")));
         BehaviorResult::Success
     }
 }
@@ -15,7 +16,7 @@ impl BehaviorNode for CheckMeNode {
 #[test]
 fn test_check() {
     let mut ctx = Context::default();
-    ctx.set("check", "check me");
+    ctx.set(Symbol::from("check"), "check me");
     let mut print_arm = CheckMeNode;
     print_arm.tick(&mut ctx);
 }
