@@ -3,29 +3,19 @@ use serde_yaml::Value;
 use std::collections::HashMap;
 use symbol::Symbol;
 
-pub trait Constructor {
-    fn build(&self) -> Box<dyn BehaviorNode>;
-}
+pub trait Constructor: Fn() -> Box<dyn BehaviorNode> {}
 
 pub struct Registry {
-    node_types: HashMap<String, Box<dyn Constructor>>,
+    node_types: HashMap<String, Box<dyn Fn() -> Box<dyn BehaviorNode>>>,
     key_names: HashMap<String, Symbol>,
 }
 
-struct SequenceConstructor;
-
-impl Constructor for SequenceConstructor {
-    fn build(&self) -> Box<dyn BehaviorNode> {
-        Box::new(SequenceNode::default())
-    }
+fn sequence_constructor() -> Box<dyn BehaviorNode> {
+    Box::new(SequenceNode::default())
 }
 
-struct FallbackConstructor;
-
-impl Constructor for FallbackConstructor {
-    fn build(&self) -> Box<dyn BehaviorNode> {
-        Box::new(FallbackNode::default())
-    }
+fn fallback_constructor() -> Box<dyn BehaviorNode> {
+    Box::new(FallbackNode::default())
 }
 
 impl Default for Registry {
@@ -34,21 +24,25 @@ impl Default for Registry {
             node_types: HashMap::new(),
             key_names: HashMap::new(),
         };
-        ret.register("Sequence", Box::new(SequenceConstructor));
-        ret.register("Fallback", Box::new(FallbackConstructor));
+        ret.register("Sequence", Box::new(sequence_constructor));
+        ret.register("Fallback", Box::new(fallback_constructor));
         ret
     }
 }
 
 impl Registry {
-    pub fn register(&mut self, type_name: impl ToString, constructor: Box<dyn Constructor>) {
+    pub fn register(
+        &mut self,
+        type_name: impl ToString,
+        constructor: Box<dyn Fn() -> Box<dyn BehaviorNode>>,
+    ) {
         self.node_types.insert(type_name.to_string(), constructor);
     }
 
     pub fn build(&self, type_name: &str) -> Option<Box<dyn BehaviorNode>> {
         self.node_types
             .get(type_name)
-            .map(|constructor| constructor.build())
+            .map(|constructor| constructor())
     }
 }
 

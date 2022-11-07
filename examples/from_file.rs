@@ -70,35 +70,27 @@ impl BehaviorNode for PrintBodyNode {
     }
 }
 
-struct PrintArmNodeConstructor;
-
-impl Constructor for PrintArmNodeConstructor {
-    fn build(&self) -> Box<dyn BehaviorNode> {
-        Box::new(PrintArmNode::new())
-    }
+fn print_arm_node() -> Box<dyn BehaviorNode> {
+    Box::new(PrintArmNode::new())
 }
 
-struct PrintBodyNodeConstructor;
+fn print_body_node() -> Box<dyn BehaviorNode> {
+    let start = std::time::Instant::now();
 
-impl Constructor for PrintBodyNodeConstructor {
-    fn build(&self) -> Box<dyn BehaviorNode> {
-        let start = std::time::Instant::now();
+    let ret = PrintBodyNode::new();
 
-        let ret = PrintBodyNode::new();
+    eprintln!(
+        "construct time: {}",
+        start.elapsed().as_nanos() as f64 * 1e-9
+    );
 
-        eprintln!(
-            "construct time: {}",
-            start.elapsed().as_nanos() as f64 * 1e-9
-        );
-
-        Box::new(ret)
-    }
+    Box::new(ret)
 }
 
 fn main() -> anyhow::Result<()> {
     let mut registry = Registry::default();
-    registry.register("PrintArmNode", Box::new(PrintArmNodeConstructor));
-    registry.register("PrintBodyNode", Box::new(PrintBodyNodeConstructor));
+    registry.register("PrintArmNode", Box::new(print_arm_node));
+    registry.register("PrintBodyNode", Box::new(print_body_node));
     let file = String::from_utf8(fs::read("test.yaml")?).unwrap();
     let mut trees = load_yaml(&file, &registry)?;
 
