@@ -1,0 +1,17 @@
+
+node PrintArmNode {
+  in arm: Arm
+}
+
+node PrintBodyNode {
+  out left_arm: Arm
+  out right_arm: Arm
+}
+
+tree main = Sequence {
+  PrintBodyNode (left_arm -> left_arm, right_arm -> right_arm)
+  Sequence {
+    PrintArmNode (arm <- left_arm)
+    PrintArmNode (arm <- right_arm)
+  }
+}

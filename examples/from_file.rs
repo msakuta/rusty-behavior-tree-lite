@@ -1,6 +1,5 @@
-use ::behavior_tree_lite::{
-    load_yaml, BehaviorNode, BehaviorResult, Constructor, Context, Registry,
-};
+use ::behavior_tree_lite::{parse_file, BehaviorNode, BehaviorResult, Context, Registry};
+
 use std::fs;
 use symbol::Symbol;
 
@@ -91,26 +90,30 @@ fn main() -> anyhow::Result<()> {
     let mut registry = Registry::default();
     registry.register("PrintArmNode", Box::new(print_arm_node));
     registry.register("PrintBodyNode", Box::new(print_body_node));
-    let file = String::from_utf8(fs::read("test.yaml")?).unwrap();
-    let mut trees = load_yaml(&file, &registry)?;
 
-    if let Some(main) = trees.get_mut("main") {
-        let body = Body {
-            left_arm: Arm {
-                name: "left_arm".to_string(),
-            },
-            right_arm: Arm {
-                name: "right_arm".to_string(),
-            },
-        };
+    let file = String::from_utf8(fs::read("test.txt")?).unwrap();
 
-        let mut ctx = Context::default();
-        ctx.set("body".into(), body);
+    let (_, tree_source) =
+        parse_file(&file).map_err(|e| anyhow::format_err!("parse error: {e:?}"))?;
+    println!("tree_source: {tree_source:?}");
 
-        let result = main.tick(&mut ctx);
+    // if let Some(main) = trees.get_mut("main") {
+    //     let body = Body {
+    //         left_arm: Arm {
+    //             name: "left_arm".to_string(),
+    //         },
+    //         right_arm: Arm {
+    //             name: "right_arm".to_string(),
+    //         },
+    //     };
 
-        eprintln!("result: {:?}", result);
-    }
+    //     let mut ctx = Context::default();
+    //     ctx.set("body".into(), body);
+
+    //     let result = main.tick(&mut ctx);
+
+    //     eprintln!("result: {:?}", result);
+    // }
 
     Ok(())
 }

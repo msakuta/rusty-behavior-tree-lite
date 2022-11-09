@@ -6,7 +6,9 @@ use std::collections::HashMap;
 use symbol::Symbol;
 
 pub use crate::nodes::{FallbackNode, SequenceNode};
-pub use crate::parser::{load_yaml, Constructor, Registry};
+pub use crate::parser::{
+    load_yaml, node_def, parse_file, parse_nodes, Constructor, NodeDef, Registry,
+};
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum BehaviorResult {
