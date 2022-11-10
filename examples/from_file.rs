@@ -1,4 +1,4 @@
-use ::behavior_tree_lite::{parse_file, BehaviorNode, BehaviorResult, Context, Registry};
+use ::behavior_tree_lite::{load, parse_file, BehaviorNode, BehaviorResult, Context, Registry};
 
 use std::fs;
 use symbol::Symbol;
@@ -95,20 +95,24 @@ fn main() -> anyhow::Result<()> {
 
     let (_, tree_source) =
         parse_file(&file).map_err(|e| anyhow::format_err!("parse error: {e:?}"))?;
-    println!("tree_source: {tree_source:?}");
+    println!("tree_source: {tree_source:#?}");
 
     // if let Some(main) = trees.get_mut("main") {
-    //     let body = Body {
-    //         left_arm: Arm {
-    //             name: "left_arm".to_string(),
-    //         },
-    //         right_arm: Arm {
-    //             name: "right_arm".to_string(),
-    //         },
-    //     };
+    let body = Body {
+        left_arm: Arm {
+            name: "left_arm".to_string(),
+        },
+        right_arm: Arm {
+            name: "right_arm".to_string(),
+        },
+    };
 
-    //     let mut ctx = Context::default();
-    //     ctx.set("body".into(), body);
+    let mut ctx = Context::default();
+    ctx.set("body".into(), body);
+
+    let mut root =
+        load(&tree_source, &registry).map_err(|e| anyhow::format_err!("parse error: {e}"))?;
+    println!("root: {:?}", root.tick(&mut ctx));
 
     //     let result = main.tick(&mut ctx);
 

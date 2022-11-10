@@ -102,9 +102,9 @@ pub fn parse_nodes<'src>(i: &'src str) -> IResult<&'src str, Vec<NodeDef<'src>>>
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct TreeDef<'src> {
-    ty: &'src str,
+    pub(crate) ty: &'src str,
     port_maps: Vec<PortMap<'src>>,
-    children: Vec<TreeDef<'src>>,
+    pub(crate) children: Vec<TreeDef<'src>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -116,8 +116,8 @@ pub struct PortMap<'src> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct TreeRootDef<'src> {
-    name: &'src str,
-    root: TreeDef<'src>,
+    pub(crate) name: &'src str,
+    pub(crate) root: TreeDef<'src>,
 }
 
 fn parse_tree(i: &str) -> IResult<&str, TreeRootDef> {
@@ -236,8 +236,8 @@ pub fn parse_file(i: &str) -> IResult<&str, TreeSource> {
 
 #[derive(Debug, PartialEq)]
 pub struct TreeSource<'src> {
-    node_defs: Vec<NodeDef<'src>>,
-    tree_defs: Vec<TreeRootDef<'src>>,
+    pub node_defs: Vec<NodeDef<'src>>,
+    pub tree_defs: Vec<TreeRootDef<'src>>,
 }
 
 #[cfg(test)]

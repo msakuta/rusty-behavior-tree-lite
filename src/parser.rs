@@ -1,6 +1,8 @@
+mod loader;
 mod nom_parser;
 
 use crate::{error::Error, BehaviorNode, FallbackNode, SequenceNode};
+pub use loader::load;
 pub use nom_parser::{node_def, parse_file, parse_nodes, NodeDef};
 use serde_yaml::Value;
 use std::collections::HashMap;
