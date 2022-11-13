@@ -1,5 +1,6 @@
 use ::behavior_tree_lite::{
-    hash_map, BehaviorNode, BehaviorResult, BlackboardValue, Context, SequenceNode,
+    hash_map, BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context,
+    SequenceNode,
 };
 use ::symbol::Symbol;
 
@@ -17,11 +18,7 @@ struct Body {
 struct PrintArmNode;
 
 impl BehaviorNode for PrintArmNode {
-    fn tick(
-        &mut self,
-        _arg: &mut dyn FnMut(&dyn std::any::Any),
-        ctx: &mut Context,
-    ) -> BehaviorResult {
+    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         println!("Arm {:?}", ctx);
 
         if let Some(arm) = ctx.get::<Arm>("arm".into()) {
@@ -34,11 +31,7 @@ impl BehaviorNode for PrintArmNode {
 struct PrintBodyNode;
 
 impl BehaviorNode for PrintBodyNode {
-    fn tick(
-        &mut self,
-        _arg: &mut dyn FnMut(&dyn std::any::Any),
-        ctx: &mut Context,
-    ) -> BehaviorResult {
+    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         if let Some(body) = ctx.get::<Body>(Symbol::from("body")) {
             let left_arm = body.left_arm.clone();
             let right_arm = body.right_arm.clone();
@@ -81,5 +74,5 @@ fn main() {
 
     root.add_child(Box::new(print_arms), hash_map!());
 
-    root.tick(&mut |_| (), &mut ctx);
+    root.tick(&mut |_| None, &mut ctx);
 }

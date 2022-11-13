@@ -2,6 +2,7 @@ mod error;
 mod nodes;
 mod parser;
 
+use std::any::Any;
 use std::collections::HashMap;
 use symbol::Symbol;
 
@@ -26,7 +27,7 @@ pub type BBMap = HashMap<Symbol, BlackboardValue>;
 
 #[derive(Default, Debug)]
 pub struct Context<'e, T: 'e = ()> {
-    blackboard: HashMap<Symbol, Box<dyn std::any::Any>>,
+    blackboard: HashMap<Symbol, Box<dyn Any>>,
     blackboard_map: BBMap,
     pub env: Option<&'e mut T>,
 }
@@ -52,7 +53,7 @@ impl<'e, E> Context<'e, E> {
             None => &key,
             Some(BlackboardValue::Ref(mapped)) => mapped,
             Some(BlackboardValue::Literal(mapped)) => {
-                return (mapped as &dyn std::any::Any).downcast_ref();
+                return (mapped as &dyn Any).downcast_ref();
             }
         };
 
@@ -77,12 +78,10 @@ impl<'e, E> Context<'e, E> {
     // }
 }
 
+pub type BehaviorCallback<'a> = &'a mut dyn FnMut(&dyn Any) -> Option<Box<dyn Any>>;
+
 pub trait BehaviorNode {
-    fn tick<'a>(
-        &mut self,
-        arg: &mut dyn FnMut(&dyn std::any::Any),
-        ctx: &mut Context,
-    ) -> BehaviorResult;
+    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult;
 
     fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: BBMap) {}
 }

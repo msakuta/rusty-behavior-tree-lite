@@ -1,4 +1,7 @@
-use crate::{BBMap, BehaviorNode, BehaviorNodeContainer, BehaviorResult, BlackboardValue, Context};
+use crate::{
+    BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, BlackboardValue,
+    Context,
+};
 use std::collections::HashMap;
 use symbol::Symbol;
 
@@ -13,11 +16,7 @@ impl Default for SequenceNode {
 }
 
 impl BehaviorNode for SequenceNode {
-    fn tick(
-        &mut self,
-        arg: &mut dyn FnMut(&dyn std::any::Any),
-        ctx: &mut Context,
-    ) -> BehaviorResult {
+    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         for node in &mut self.children {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
             if node.node.tick(arg, ctx) == BehaviorResult::Fail {
@@ -48,11 +47,7 @@ impl Default for FallbackNode {
 }
 
 impl BehaviorNode for FallbackNode {
-    fn tick(
-        &mut self,
-        arg: &mut dyn FnMut(&dyn std::any::Any),
-        ctx: &mut Context,
-    ) -> BehaviorResult {
+    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         for node in &mut self.children {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
             if node.node.tick(arg, ctx) == BehaviorResult::Success {

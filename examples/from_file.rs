@@ -1,4 +1,6 @@
-use ::behavior_tree_lite::{load, parse_file, BehaviorNode, BehaviorResult, Context, Registry};
+use ::behavior_tree_lite::{
+    load, parse_file, BehaviorCallback, BehaviorNode, BehaviorResult, Context, Registry,
+};
 
 use std::fs;
 use symbol::Symbol;
@@ -27,11 +29,7 @@ impl PrintArmNode {
 }
 
 impl BehaviorNode for PrintArmNode {
-    fn tick(
-        &mut self,
-        _arg: &mut dyn FnMut(&dyn std::any::Any),
-        ctx: &mut Context,
-    ) -> BehaviorResult {
+    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         println!("Arm {:?}", ctx);
 
         if let Some(arm) = ctx.get::<Arm>(self.arm_sym) {
@@ -54,11 +52,7 @@ impl PrintStringNode {
 }
 
 impl BehaviorNode for PrintStringNode {
-    fn tick(
-        &mut self,
-        _arg: &mut dyn FnMut(&dyn std::any::Any),
-        ctx: &mut Context,
-    ) -> BehaviorResult {
+    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         if let Some(s) = ctx.get::<String>(self.input) {
             println!("PrintStringNode: {}", s);
         } else {
@@ -85,7 +79,7 @@ impl PrintBodyNode {
 }
 
 impl BehaviorNode for PrintBodyNode {
-    fn tick(&mut self, _: &mut dyn FnMut(&dyn std::any::Any), ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, _: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         if let Some(body) = ctx.get::<Body>(self.body_sym) {
             let left_arm = body.left_arm.clone();
             let right_arm = body.right_arm.clone();
@@ -147,7 +141,7 @@ fn main() -> anyhow::Result<()> {
 
     let mut root =
         load(&tree_source, &registry).map_err(|e| anyhow::format_err!("parse error: {e}"))?;
-    let mut null = |_: &dyn std::any::Any| ();
+    let mut null = |_: &dyn std::any::Any| -> Option<Box<dyn std::any::Any>> { None };
     println!("root: {:?}", root.tick(&mut null, &mut ctx));
 
     //     let result = main.tick(&mut ctx);
