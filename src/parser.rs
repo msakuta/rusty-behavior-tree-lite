@@ -10,20 +10,20 @@ use symbol::Symbol;
 
 pub trait Constructor: Fn() -> Box<dyn BehaviorNode> {}
 
-pub struct Registry {
-    node_types: HashMap<String, Box<dyn Fn() -> Box<dyn BehaviorNode>>>,
+pub struct Registry<E = ()> {
+    node_types: HashMap<String, Box<dyn Fn() -> Box<dyn BehaviorNode<E>>>>,
     key_names: HashMap<String, Symbol>,
 }
 
-fn sequence_constructor() -> Box<dyn BehaviorNode> {
-    Box::new(SequenceNode::default())
+fn sequence_constructor<E: 'static>() -> Box<dyn BehaviorNode<E> + 'static> {
+    Box::new(SequenceNode::<E>::default())
 }
 
-fn fallback_constructor() -> Box<dyn BehaviorNode> {
-    Box::new(FallbackNode::default())
+fn fallback_constructor<E: 'static>() -> Box<dyn BehaviorNode<E> + 'static> {
+    Box::new(FallbackNode::<E>::default())
 }
 
-impl Default for Registry {
+impl<E: 'static> Default for Registry<E> {
     fn default() -> Self {
         let mut ret = Self {
             node_types: HashMap::new(),
@@ -35,16 +35,16 @@ impl Default for Registry {
     }
 }
 
-impl Registry {
+impl<E> Registry<E> {
     pub fn register(
         &mut self,
         type_name: impl ToString,
-        constructor: Box<dyn Fn() -> Box<dyn BehaviorNode>>,
+        constructor: Box<dyn Fn() -> Box<dyn BehaviorNode<E>>>,
     ) {
         self.node_types.insert(type_name.to_string(), constructor);
     }
 
-    pub fn build(&self, type_name: &str) -> Option<Box<dyn BehaviorNode>> {
+    pub fn build(&self, type_name: &str) -> Option<Box<dyn BehaviorNode<E>>> {
         self.node_types
             .get(type_name)
             .map(|constructor| constructor())

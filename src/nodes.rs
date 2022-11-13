@@ -2,13 +2,18 @@ use crate::{BehaviorNode, BehaviorNodeContainer, BehaviorResult, Context};
 use std::collections::HashMap;
 use symbol::Symbol;
 
-#[derive(Default)]
-pub struct SequenceNode {
-    children: Vec<BehaviorNodeContainer>,
+pub struct SequenceNode<E> {
+    children: Vec<BehaviorNodeContainer<E>>,
 }
 
-impl BehaviorNode for SequenceNode {
-    fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
+impl<E> Default for SequenceNode<E> {
+    fn default() -> Self {
+        Self { children: vec![] }
+    }
+}
+
+impl<E> BehaviorNode<E> for SequenceNode<E> {
+    fn tick(&mut self, ctx: &mut Context<E>) -> BehaviorResult {
         for node in &mut self.children {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
             if node.node.tick(ctx) == BehaviorResult::Fail {
@@ -19,7 +24,11 @@ impl BehaviorNode for SequenceNode {
         BehaviorResult::Success
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: HashMap<Symbol, Symbol>) {
+    fn add_child(
+        &mut self,
+        node: Box<dyn BehaviorNode<E>>,
+        blackboard_map: HashMap<Symbol, Symbol>,
+    ) {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,
@@ -27,13 +36,18 @@ impl BehaviorNode for SequenceNode {
     }
 }
 
-#[derive(Default)]
-pub struct FallbackNode {
-    children: Vec<BehaviorNodeContainer>,
+pub struct FallbackNode<E> {
+    children: Vec<BehaviorNodeContainer<E>>,
 }
 
-impl BehaviorNode for FallbackNode {
-    fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
+impl<E> Default for FallbackNode<E> {
+    fn default() -> Self {
+        Self { children: vec![] }
+    }
+}
+
+impl<E> BehaviorNode<E> for FallbackNode<E> {
+    fn tick(&mut self, ctx: &mut Context<E>) -> BehaviorResult {
         for node in &mut self.children {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
             if node.node.tick(ctx) == BehaviorResult::Success {
@@ -44,7 +58,11 @@ impl BehaviorNode for FallbackNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: HashMap<Symbol, Symbol>) {
+    fn add_child(
+        &mut self,
+        node: Box<dyn BehaviorNode<E>>,
+        blackboard_map: HashMap<Symbol, Symbol>,
+    ) {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,
