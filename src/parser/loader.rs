@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::nom_parser::{TreeDef, TreeSource};
-use crate::{BehaviorNode, Registry};
+use crate::{BBMap, BehaviorNode, Registry};
 
 pub fn load(
     tree_source: &TreeSource,
@@ -22,7 +22,21 @@ fn load_recurse(parent: &TreeDef, registry: &Registry) -> Result<Box<dyn Behavio
         .ok_or_else(|| format!("Type not found {:?}", parent.ty))?;
 
     for child in &parent.children {
-        ret.add_child(load_recurse(child, registry)?, HashMap::new());
+        let mut bbmap = BBMap::new();
+        for entry in child.port_maps.iter() {
+            bbmap.insert(
+                entry.node_port.into(),
+                match entry.blackboard_value {
+                    super::nom_parser::BlackboardValue::Ref(ref value) => {
+                        crate::BlackboardValue::Ref(value.into())
+                    }
+                    super::nom_parser::BlackboardValue::Literal(ref value) => {
+                        crate::BlackboardValue::Literal(value.clone())
+                    }
+                },
+            );
+        }
+        ret.add_child(load_recurse(child, registry)?, bbmap);
     }
 
     Ok(ret)

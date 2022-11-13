@@ -41,6 +41,33 @@ impl BehaviorNode for PrintArmNode {
     }
 }
 
+struct PrintStringNode {
+    input: Symbol,
+}
+
+impl PrintStringNode {
+    fn new() -> Self {
+        Self {
+            input: "input".into(),
+        }
+    }
+}
+
+impl BehaviorNode for PrintStringNode {
+    fn tick(
+        &mut self,
+        _arg: &mut dyn FnMut(&dyn std::any::Any),
+        ctx: &mut Context,
+    ) -> BehaviorResult {
+        if let Some(s) = ctx.get::<String>(self.input) {
+            println!("PrintStringNode: {}", s);
+        } else {
+            println!("PrintStringNode: didn't get string");
+        }
+        BehaviorResult::Success
+    }
+}
+
 struct PrintBodyNode {
     body_sym: Symbol,
     left_arm_sym: Symbol,
@@ -94,6 +121,10 @@ fn main() -> anyhow::Result<()> {
     let mut registry = Registry::default();
     registry.register("PrintArmNode", Box::new(print_arm_node));
     registry.register("PrintBodyNode", Box::new(print_body_node));
+    registry.register(
+        "PrintStringNode",
+        Box::new(|| Box::new(PrintStringNode::new())),
+    );
 
     let file = String::from_utf8(fs::read("test.txt")?).unwrap();
 

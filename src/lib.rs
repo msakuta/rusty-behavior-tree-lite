@@ -16,10 +16,18 @@ pub enum BehaviorResult {
     Fail,
 }
 
+#[derive(Debug)]
+pub enum BlackboardValue {
+    Ref(Symbol),
+    Literal(String),
+}
+
+pub type BBMap = HashMap<Symbol, BlackboardValue>;
+
 #[derive(Default, Debug)]
 pub struct Context<'e, T: 'e = ()> {
     blackboard: HashMap<Symbol, Box<dyn std::any::Any>>,
-    blackboard_map: HashMap<Symbol, Symbol>,
+    blackboard_map: BBMap,
     pub env: Option<&'e mut T>,
 }
 
@@ -39,8 +47,15 @@ impl<'e, E> Context<'e, E> {
         'e: 'a,
     {
         let key: Symbol = key.into();
-        let mapped = self.blackboard_map.get(&key).map(|key| key).unwrap_or(&key);
-        // println!("mapped: {:?}", mapped);
+        let mapped = self.blackboard_map.get(&key);
+        let mapped = match mapped {
+            None => &key,
+            Some(BlackboardValue::Ref(mapped)) => mapped,
+            Some(BlackboardValue::Literal(mapped)) => {
+                return (mapped as &dyn std::any::Any).downcast_ref();
+            }
+        };
+
         self.blackboard.get(mapped).and_then(|val| {
             // println!("val: {:?}", val);
             val.downcast_ref()
@@ -48,7 +63,12 @@ impl<'e, E> Context<'e, E> {
     }
 
     pub fn set<T: 'static>(&mut self, key: Symbol, val: T) {
-        let mapped = self.blackboard_map.get(&key).cloned().unwrap_or(key);
+        let mapped = self.blackboard_map.get(&key);
+        let mapped = match mapped {
+            None => key,
+            Some(BlackboardValue::Ref(mapped)) => *mapped,
+            Some(BlackboardValue::Literal(_)) => panic!("Cannot write to a literal!"),
+        };
         self.blackboard.insert(mapped, Box::new(val));
     }
 
@@ -64,13 +84,12 @@ pub trait BehaviorNode {
         ctx: &mut Context,
     ) -> BehaviorResult;
 
-    fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: HashMap<Symbol, Symbol>) {
-    }
+    fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: BBMap) {}
 }
 
 pub struct BehaviorNodeContainer {
     node: Box<dyn BehaviorNode>,
-    blackboard_map: HashMap<Symbol, Symbol>,
+    blackboard_map: HashMap<Symbol, BlackboardValue>,
 }
 
 #[macro_export]

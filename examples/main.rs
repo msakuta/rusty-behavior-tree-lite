@@ -1,4 +1,6 @@
-use ::behavior_tree_lite::{hash_map, BehaviorNode, BehaviorResult, Context, SequenceNode};
+use ::behavior_tree_lite::{
+    hash_map, BehaviorNode, BehaviorResult, BlackboardValue, Context, SequenceNode,
+};
 use ::symbol::Symbol;
 
 #[derive(Clone, Debug)]
@@ -68,8 +70,14 @@ fn main() {
     root.add_child(Box::new(PrintBodyNode), hash_map!());
 
     let mut print_arms = SequenceNode::default();
-    print_arms.add_child(Box::new(PrintArmNode), hash_map!("arm" => "left_arm"));
-    print_arms.add_child(Box::new(PrintArmNode), hash_map!("arm" => "right_arm"));
+    print_arms.add_child(
+        Box::new(PrintArmNode),
+        hash_map!("arm" => BlackboardValue::Ref("left_arm".into())),
+    );
+    print_arms.add_child(
+        Box::new(PrintArmNode),
+        hash_map!("arm" => BlackboardValue::Ref("right_arm".into())),
+    );
 
     root.add_child(Box::new(print_arms), hash_map!());
 

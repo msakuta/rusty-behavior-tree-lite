@@ -1,7 +1,7 @@
 mod loader;
 mod nom_parser;
 
-use crate::{error::Error, BehaviorNode, FallbackNode, SequenceNode};
+use crate::{error::Error, BBMap, BehaviorNode, BlackboardValue, FallbackNode, SequenceNode};
 pub use loader::load;
 pub use nom_parser::{node_def, parse_file, parse_nodes, NodeDef};
 use serde_yaml::Value;
@@ -54,7 +54,7 @@ impl Registry {
 fn recurse_parse(
     value: &serde_yaml::Value,
     reg: &Registry,
-) -> serde_yaml::Result<Option<(Box<dyn BehaviorNode>, HashMap<Symbol, Symbol>)>> {
+) -> serde_yaml::Result<Option<(Box<dyn BehaviorNode>, BBMap)>> {
     let mut node = if let Some(node) =
         value
             .get("type")
@@ -82,7 +82,10 @@ fn recurse_parse(
             .iter()
             .filter_map(|(key, value)| {
                 key.as_str().zip(value.as_str()).and_then(|(key, value)| {
-                    Some((*reg.key_names.get(key)?, *reg.key_names.get(value)?))
+                    Some((
+                        *reg.key_names.get(key)?,
+                        BlackboardValue::Ref(*reg.key_names.get(value)?),
+                    ))
                 })
             })
             .collect()

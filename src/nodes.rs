@@ -1,4 +1,4 @@
-use crate::{BehaviorNode, BehaviorNodeContainer, BehaviorResult, Context};
+use crate::{BBMap, BehaviorNode, BehaviorNodeContainer, BehaviorResult, BlackboardValue, Context};
 use std::collections::HashMap;
 use symbol::Symbol;
 
@@ -28,7 +28,7 @@ impl BehaviorNode for SequenceNode {
         BehaviorResult::Success
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: HashMap<Symbol, Symbol>) {
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,
@@ -65,7 +65,7 @@ impl BehaviorNode for FallbackNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: HashMap<Symbol, Symbol>) {
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,

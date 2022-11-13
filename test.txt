@@ -13,6 +13,6 @@ tree main = Sequence {
   Sequence {
     PrintArmNode (arm <- left_arm)
     PrintArmNode (arm <- right_arm)
-    PrintArmNode (arm <- right_arm)
+    PrintStringNode (input <- "literal message")
   }
 }

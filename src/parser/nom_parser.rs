@@ -103,7 +103,7 @@ pub fn parse_nodes<'src>(i: &'src str) -> IResult<&'src str, Vec<NodeDef<'src>>>
 #[derive(Debug, PartialEq, Eq)]
 pub struct TreeDef<'src> {
     pub(crate) ty: &'src str,
-    port_maps: Vec<PortMap<'src>>,
+    pub(crate) port_maps: Vec<PortMap<'src>>,
     pub(crate) children: Vec<TreeDef<'src>>,
 }
 
@@ -116,9 +116,9 @@ pub enum BlackboardValue<'src> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct PortMap<'src> {
-    input: bool,
-    node_port: &'src str,
-    blackboard_value: BlackboardValue<'src>,
+    pub(crate) input: bool,
+    pub(crate) node_port: &'src str,
+    pub(crate) blackboard_value: BlackboardValue<'src>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
