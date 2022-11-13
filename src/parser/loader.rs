@@ -3,10 +3,10 @@ use std::collections::HashMap;
 use super::nom_parser::{TreeDef, TreeSource};
 use crate::{BehaviorNode, Registry};
 
-pub fn load<E>(
+pub fn load(
     tree_source: &TreeSource,
-    registry: &Registry<E>,
-) -> Result<Box<dyn BehaviorNode<E>>, String> {
+    registry: &Registry,
+) -> Result<Box<dyn BehaviorNode>, String> {
     let main = tree_source
         .tree_defs
         .iter()
@@ -16,10 +16,7 @@ pub fn load<E>(
     load_recurse(&main.root, registry)
 }
 
-fn load_recurse<E>(
-    parent: &TreeDef,
-    registry: &Registry<E>,
-) -> Result<Box<dyn BehaviorNode<E>>, String> {
+fn load_recurse(parent: &TreeDef, registry: &Registry) -> Result<Box<dyn BehaviorNode>, String> {
     let mut ret = registry
         .build(parent.ty)
         .ok_or_else(|| format!("Type not found {:?}", parent.ty))?;

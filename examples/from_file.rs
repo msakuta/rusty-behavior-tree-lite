@@ -27,7 +27,11 @@ impl PrintArmNode {
 }
 
 impl BehaviorNode for PrintArmNode {
-    fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
+    fn tick(
+        &mut self,
+        _arg: &mut dyn FnMut(&dyn std::any::Any),
+        ctx: &mut Context,
+    ) -> BehaviorResult {
         println!("Arm {:?}", ctx);
 
         if let Some(arm) = ctx.get::<Arm>(self.arm_sym) {
@@ -54,7 +58,7 @@ impl PrintBodyNode {
 }
 
 impl BehaviorNode for PrintBodyNode {
-    fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, _: &mut dyn FnMut(&dyn std::any::Any), ctx: &mut Context) -> BehaviorResult {
         if let Some(body) = ctx.get::<Body>(self.body_sym) {
             let left_arm = body.left_arm.clone();
             let right_arm = body.right_arm.clone();
@@ -112,7 +116,8 @@ fn main() -> anyhow::Result<()> {
 
     let mut root =
         load(&tree_source, &registry).map_err(|e| anyhow::format_err!("parse error: {e}"))?;
-    println!("root: {:?}", root.tick(&mut ctx));
+    let mut null = |_: &dyn std::any::Any| ();
+    println!("root: {:?}", root.tick(&mut null, &mut ctx));
 
     //     let result = main.tick(&mut ctx);
 

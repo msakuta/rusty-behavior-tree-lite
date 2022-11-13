@@ -17,14 +17,14 @@ pub enum BehaviorResult {
 }
 
 #[derive(Default, Debug)]
-pub struct Context<'e, E = ()> {
+pub struct Context<'e, T: 'e = ()> {
     blackboard: HashMap<Symbol, Box<dyn std::any::Any>>,
     blackboard_map: HashMap<Symbol, Symbol>,
-    pub env: Option<&'e mut E>,
+    pub env: Option<&'e mut T>,
 }
 
-impl<'e, E> Context<'e, E> {
-    pub fn new(env: &'e mut E) -> Self {
+impl<'e, T> Context<'e, T> {
+    pub fn new(env: &'e mut T) -> Self {
         Self {
             blackboard: HashMap::new(),
             blackboard_map: HashMap::new(),
@@ -34,7 +34,10 @@ impl<'e, E> Context<'e, E> {
 }
 
 impl<'e, E> Context<'e, E> {
-    pub fn get<'a, T: 'static>(&'a self, key: Symbol) -> Option<&'a T> {
+    pub fn get<'a, T: 'static>(&'a self, key: Symbol) -> Option<&'a T>
+    where
+        'e: 'a,
+    {
         let key: Symbol = key.into();
         let mapped = self.blackboard_map.get(&key).map(|key| key).unwrap_or(&key);
         // println!("mapped: {:?}", mapped);
@@ -54,19 +57,19 @@ impl<'e, E> Context<'e, E> {
     // }
 }
 
-pub trait BehaviorNode<E = ()> {
-    fn tick(&mut self, ctx: &mut Context<E>) -> BehaviorResult;
-
-    fn add_child(
+pub trait BehaviorNode {
+    fn tick<'a>(
         &mut self,
-        _val: Box<dyn BehaviorNode<E>>,
-        _blackboard_map: HashMap<Symbol, Symbol>,
-    ) {
+        arg: &mut dyn FnMut(&dyn std::any::Any),
+        ctx: &mut Context,
+    ) -> BehaviorResult;
+
+    fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: HashMap<Symbol, Symbol>) {
     }
 }
 
-pub struct BehaviorNodeContainer<E> {
-    node: Box<dyn BehaviorNode<E>>,
+pub struct BehaviorNodeContainer {
+    node: Box<dyn BehaviorNode>,
     blackboard_map: HashMap<Symbol, Symbol>,
 }
 
