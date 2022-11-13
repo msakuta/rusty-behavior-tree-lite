@@ -1,10 +1,10 @@
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{alpha1, alphanumeric1, char, multispace0, one_of, space0},
+    character::complete::{alpha1, alphanumeric1, char, multispace0, none_of, one_of, space0},
     combinator::{opt, recognize},
     multi::{many0, many1},
-    sequence::{delimited, pair},
+    sequence::{delimited, pair, preceded, terminated},
     IResult,
 };
 
@@ -108,10 +108,17 @@ pub struct TreeDef<'src> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+pub enum BlackboardValue<'src> {
+    /// Litral value could have decoded, so it is an owned string.
+    Literal(String),
+    Ref(&'src str),
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub struct PortMap<'src> {
     input: bool,
     node_port: &'src str,
-    blackboard_name: &'src str,
+    blackboard_value: BlackboardValue<'src>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -184,18 +191,39 @@ fn port_map(i: &str) -> IResult<&str, PortMap> {
 
     let (i, inout) = delimited(space0, alt((tag("<-"), tag("->"))), space0)(i)?;
 
-    let (i, blackboard_name) = delimited(space0, identifier, space0)(i)?;
+    let (i, blackboard_name) = delimited(space0, alt((bb_ref, str_literal)), space0)(i)?;
 
     Ok((
         i,
         PortMap {
             input: inout == "<-",
             node_port,
-            blackboard_name,
+            blackboard_value: blackboard_name,
         },
     ))
 }
 
+fn bb_ref(i: &str) -> IResult<&str, BlackboardValue> {
+    let (i, s) = identifier(i)?;
+    Ok((i, BlackboardValue::Ref(s)))
+}
+
+fn str_literal(input: &str) -> IResult<&str, BlackboardValue> {
+    let (r, val) = delimited(
+        preceded(multispace0, char('\"')),
+        many0(none_of("\"")),
+        terminated(char('"'), multispace0),
+    )(input)?;
+    Ok((
+        r,
+        BlackboardValue::Literal(
+            val.iter()
+                .collect::<String>()
+                .replace("\\\\", "\\")
+                .replace("\\n", "\n"),
+        ),
+    ))
+}
 pub fn parse_trees(i: &str) -> IResult<&str, Vec<TreeRootDef>> {
     many0(parse_tree)(i)
 }
@@ -350,12 +378,51 @@ mod test {
                                 PortMap {
                                     input: true,
                                     node_port: "in_socket",
-                                    blackboard_name: "in_val",
+                                    blackboard_value: BlackboardValue::Ref("in_val"),
                                 },
                                 PortMap {
                                     input: false,
                                     node_port: "out_socket",
-                                    blackboard_name: "out_val",
+                                    blackboard_value: BlackboardValue::Ref("out_val"),
+                                }
+                            ],
+                            children: vec![]
+                        }]
+                    }
+                }
+            ))
+        );
+    }
+
+    #[test]
+    fn test_port_literal() {
+        assert_eq!(
+            parse_tree(
+                r#"tree main = Sequence {
+                PrintBodyNode(in_socket <- "in_val", out_socket -> out_val)
+    }"#
+            ),
+            Ok((
+                "",
+                TreeRootDef {
+                    name: "main",
+                    root: TreeDef {
+                        ty: "Sequence",
+                        port_maps: vec![],
+                        children: vec![TreeDef {
+                            ty: "PrintBodyNode",
+                            port_maps: vec![
+                                PortMap {
+                                    input: true,
+                                    node_port: "in_socket",
+                                    blackboard_value: BlackboardValue::Literal(
+                                        "in_val".to_string()
+                                    ),
+                                },
+                                PortMap {
+                                    input: false,
+                                    node_port: "out_socket",
+                                    blackboard_value: BlackboardValue::Ref("out_val"),
                                 }
                             ],
                             children: vec![]
@@ -403,12 +470,12 @@ mod test {
                                     PortMap {
                                         input: true,
                                         node_port: "in_socket",
-                                        blackboard_name: "in_val",
+                                        blackboard_value: BlackboardValue::Ref("in_val"),
                                     },
                                     PortMap {
                                         input: false,
                                         node_port: "out_socket",
-                                        blackboard_name: "out_val",
+                                        blackboard_value: BlackboardValue::Ref("out_val"),
                                     }
                                 ],
                                 children: vec![],

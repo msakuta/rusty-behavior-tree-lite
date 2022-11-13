@@ -7,7 +7,11 @@ use symbol::Symbol;
 struct CheckMeNode;
 
 impl BehaviorNode for CheckMeNode {
-    fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
+    fn tick(
+        &mut self,
+        _arg: &mut dyn FnMut(&dyn std::any::Any),
+        ctx: &mut Context,
+    ) -> BehaviorResult {
         assert_eq!(Some(&"check me"), ctx.get(Symbol::from("check")));
         BehaviorResult::Success
     }
@@ -18,13 +22,17 @@ fn test_check() {
     let mut ctx = Context::default();
     ctx.set(Symbol::from("check"), "check me");
     let mut print_arm = CheckMeNode;
-    print_arm.tick(&mut ctx);
+    print_arm.tick(&mut |_| (), &mut ctx);
 }
 
 struct AlwaysSucceed;
 
 impl BehaviorNode for AlwaysSucceed {
-    fn tick(&mut self, _ctx: &mut Context) -> BehaviorResult {
+    fn tick(
+        &mut self,
+        _arg: &mut dyn FnMut(&dyn std::any::Any),
+        _ctx: &mut Context,
+    ) -> BehaviorResult {
         BehaviorResult::Success
     }
 }
@@ -32,7 +40,11 @@ impl BehaviorNode for AlwaysSucceed {
 struct AlwaysFail;
 
 impl BehaviorNode for AlwaysFail {
-    fn tick(&mut self, _ctx: &mut Context) -> BehaviorResult {
+    fn tick(
+        &mut self,
+        _arg: &mut dyn FnMut(&dyn std::any::Any),
+        _ctx: &mut Context,
+    ) -> BehaviorResult {
         BehaviorResult::Fail
     }
 }
@@ -42,9 +54,15 @@ fn test_sequence() {
     let mut seq = SequenceNode::default();
     seq.add_child(Box::new(AlwaysSucceed), hash_map!());
     seq.add_child(Box::new(AlwaysSucceed), hash_map!());
-    assert_eq!(seq.tick(&mut Context::default()), BehaviorResult::Success);
+    assert_eq!(
+        seq.tick(&mut |_| (), &mut Context::default()),
+        BehaviorResult::Success
+    );
     seq.add_child(Box::new(AlwaysFail), hash_map!());
-    assert_eq!(seq.tick(&mut Context::default()), BehaviorResult::Fail);
+    assert_eq!(
+        seq.tick(&mut |_| (), &mut Context::default()),
+        BehaviorResult::Fail
+    );
 }
 
 #[test]
@@ -52,7 +70,13 @@ fn test_fallback() {
     let mut seq = FallbackNode::default();
     seq.add_child(Box::new(AlwaysFail), hash_map!());
     seq.add_child(Box::new(AlwaysFail), hash_map!());
-    assert_eq!(seq.tick(&mut Context::default()), BehaviorResult::Fail);
+    assert_eq!(
+        seq.tick(&mut |_| (), &mut Context::default()),
+        BehaviorResult::Fail
+    );
     seq.add_child(Box::new(AlwaysSucceed), hash_map!());
-    assert_eq!(seq.tick(&mut Context::default()), BehaviorResult::Success);
+    assert_eq!(
+        seq.tick(&mut |_| (), &mut Context::default()),
+        BehaviorResult::Success
+    );
 }
