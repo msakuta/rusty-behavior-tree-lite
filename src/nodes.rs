@@ -24,6 +24,7 @@ impl BehaviorNode for SequenceNode {
                 std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
                 return BehaviorResult::Fail;
             }
+            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
         }
         BehaviorResult::Success
     }
@@ -52,15 +53,13 @@ impl BehaviorNode for FallbackNode {
         arg: &mut dyn FnMut(&dyn std::any::Any),
         ctx: &mut Context,
     ) -> BehaviorResult {
-        let children = self.children.len();
-        for (i, node) in self.children.iter_mut().enumerate() {
-            println!("FallbackNode node child: {}/{}", i, children);
+        for node in &mut self.children {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
             if node.node.tick(arg, ctx) == BehaviorResult::Success {
                 std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
                 return BehaviorResult::Success;
             }
-            println!("FallbackNode node failed: {}/{children}", i);
+            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
         }
         BehaviorResult::Fail
     }
