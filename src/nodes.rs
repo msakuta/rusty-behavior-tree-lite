@@ -2,29 +2,40 @@ use crate::{
     BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, BlackboardValue,
     Context,
 };
-use std::collections::HashMap;
-use symbol::Symbol;
 
 pub struct SequenceNode {
     children: Vec<BehaviorNodeContainer>,
+    current_child: Option<usize>,
 }
 
 impl Default for SequenceNode {
     fn default() -> Self {
-        Self { children: vec![] }
+        Self {
+            children: vec![],
+            current_child: None,
+        }
     }
 }
 
 impl BehaviorNode for SequenceNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        for node in &mut self.children {
+        let from = self.current_child.unwrap_or(0);
+        for (i, node) in self.children[from..].iter_mut().enumerate() {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-            if node.node.tick(arg, ctx) == BehaviorResult::Fail {
-                std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-                return BehaviorResult::Fail;
+            match node.node.tick(arg, ctx) {
+                BehaviorResult::Fail => {
+                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+                    return BehaviorResult::Fail;
+                }
+                BehaviorResult::Running => {
+                    self.current_child = Some(i + from);
+                    return BehaviorResult::Running;
+                }
+                _ => (),
             }
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
         }
+        self.current_child = None;
         BehaviorResult::Success
     }
 
@@ -38,24 +49,37 @@ impl BehaviorNode for SequenceNode {
 
 pub struct FallbackNode {
     children: Vec<BehaviorNodeContainer>,
+    current_child: Option<usize>,
 }
 
 impl Default for FallbackNode {
     fn default() -> Self {
-        Self { children: vec![] }
+        Self {
+            children: vec![],
+            current_child: None,
+        }
     }
 }
 
 impl BehaviorNode for FallbackNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        for node in &mut self.children {
+        let from = self.current_child.unwrap_or(0);
+        for (i, node) in &mut self.children[from..].iter_mut().enumerate() {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-            if node.node.tick(arg, ctx) == BehaviorResult::Success {
-                std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-                return BehaviorResult::Success;
+            match node.node.tick(arg, ctx) {
+                BehaviorResult::Success => {
+                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+                    return BehaviorResult::Success;
+                }
+                BehaviorResult::Running => {
+                    self.current_child = Some(i + from);
+                    return BehaviorResult::Running;
+                }
+                _ => (),
             }
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
         }
+        self.current_child = None;
         BehaviorResult::Fail
     }
 
@@ -66,3 +90,6 @@ impl BehaviorNode for FallbackNode {
         });
     }
 }
+
+#[cfg(test)]
+mod test;

@@ -224,9 +224,6 @@ fn str_literal(input: &str) -> IResult<&str, BlackboardValue> {
         ),
     ))
 }
-pub fn parse_trees(i: &str) -> IResult<&str, Vec<TreeRootDef>> {
-    many0(parse_tree)(i)
-}
 
 pub fn parse_file(i: &str) -> IResult<&str, TreeSource> {
     enum NodeOrTree<'src> {

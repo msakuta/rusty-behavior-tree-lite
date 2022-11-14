@@ -15,6 +15,8 @@ pub use crate::parser::{
 pub enum BehaviorResult {
     Success,
     Fail,
+    /// The node should keep running in the next tick
+    Running,
 }
 
 #[derive(Debug)]
@@ -33,11 +35,11 @@ pub struct Context<'e, T: 'e = ()> {
 }
 
 impl<'e, T> Context<'e, T> {
-    pub fn new(env: &'e mut T) -> Self {
+    pub fn new(blackboard: HashMap<Symbol, Box<dyn Any>>) -> Self {
         Self {
-            blackboard: HashMap::new(),
+            blackboard,
             blackboard_map: HashMap::new(),
-            env: Some(env),
+            env: None,
         }
     }
 }
