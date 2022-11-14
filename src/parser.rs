@@ -1,7 +1,11 @@
 mod loader;
 mod nom_parser;
 
-use crate::{error::Error, BBMap, BehaviorNode, BlackboardValue, FallbackNode, SequenceNode};
+use crate::{
+    error::Error,
+    nodes::{ReactiveFallbackNode, ReactiveSequenceNode},
+    BBMap, BehaviorNode, BlackboardValue, FallbackNode, SequenceNode,
+};
 pub use loader::load;
 pub use nom_parser::{node_def, parse_file, parse_nodes, NodeDef};
 use serde_yaml::Value;
@@ -10,17 +14,16 @@ use symbol::Symbol;
 
 pub trait Constructor: Fn() -> Box<dyn BehaviorNode> {}
 
+pub fn boxify<T>(cons: impl (Fn() -> T) + 'static) -> Box<dyn Fn() -> Box<dyn BehaviorNode>>
+where
+    for<'a> T: BehaviorNode + 'static,
+{
+    Box::new(move || Box::new(cons()))
+}
+
 pub struct Registry {
     node_types: HashMap<String, Box<dyn Fn() -> Box<dyn BehaviorNode>>>,
     key_names: HashMap<String, Symbol>,
-}
-
-fn sequence_constructor() -> Box<dyn BehaviorNode + 'static> {
-    Box::new(SequenceNode::default())
-}
-
-fn fallback_constructor() -> Box<dyn BehaviorNode + 'static> {
-    Box::new(FallbackNode::default())
 }
 
 impl Default for Registry {
@@ -29,8 +32,16 @@ impl Default for Registry {
             node_types: HashMap::new(),
             key_names: HashMap::new(),
         };
-        ret.register("Sequence", Box::new(sequence_constructor));
-        ret.register("Fallback", Box::new(fallback_constructor));
+        ret.register("Sequence", boxify(|| SequenceNode::default()));
+        ret.register(
+            "ReactiveSequence",
+            boxify(|| ReactiveSequenceNode::default()),
+        );
+        ret.register("Fallback", boxify(|| FallbackNode::default()));
+        ret.register(
+            "ReactiveFallback",
+            boxify(|| ReactiveFallbackNode::default()),
+        );
         ret
     }
 }

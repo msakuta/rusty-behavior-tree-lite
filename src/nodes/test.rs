@@ -81,6 +81,40 @@ fn test_sequence_suspend() {
     assert_eq!(res, vec![true]);
 }
 
+#[test]
+fn test_reactive_sequence_suspend() {
+    let mut res = vec![];
+
+    let mut tree = ReactiveSequenceNode::default();
+    tree.add_child(Box::new(Append::<true>), BBMap::new());
+    tree.add_child(Box::new(Suspend), BBMap::new());
+    tree.add_child(Box::new(Append::<false>), BBMap::new());
+
+    assert_eq!(
+        tree.tick(
+            &mut |v: &dyn std::any::Any| {
+                res.push(*v.downcast_ref::<bool>().unwrap());
+                None
+            },
+            &mut Context::default(),
+        ),
+        BehaviorResult::Running
+    );
+
+    assert_eq!(res, vec![true]);
+
+    // Unlike a SequenceNode, ticking again will invoke push(true) again
+    tree.tick(
+        &mut |v: &dyn std::any::Any| {
+            res.push(*v.downcast_ref::<bool>().unwrap());
+            None
+        },
+        &mut Context::default(),
+    );
+
+    assert_eq!(res, vec![true, true]);
+}
+
 struct AppendAndFail<const V: bool = true>;
 
 impl<const V: bool> BehaviorNode for AppendAndFail<V> {
@@ -147,4 +181,38 @@ fn test_fallback_suspend() {
     );
 
     assert_eq!(res, vec![true]);
+}
+
+#[test]
+fn test_reactive_fallback_suspend() {
+    let mut res = vec![];
+
+    let mut tree = ReactiveFallbackNode::default();
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new());
+    tree.add_child(Box::new(Suspend), BBMap::new());
+    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new());
+
+    assert_eq!(
+        tree.tick(
+            &mut |v: &dyn std::any::Any| {
+                res.push(*v.downcast_ref::<bool>().unwrap());
+                None
+            },
+            &mut Context::default(),
+        ),
+        BehaviorResult::Running
+    );
+
+    assert_eq!(res, vec![true]);
+
+    // Unlike a FallbackNode, ticking again will invoke push(true) again
+    tree.tick(
+        &mut |v: &dyn std::any::Any| {
+            res.push(*v.downcast_ref::<bool>().unwrap());
+            None
+        },
+        &mut Context::default(),
+    );
+
+    assert_eq!(res, vec![true, true]);
 }

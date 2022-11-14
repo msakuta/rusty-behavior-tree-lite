@@ -8,7 +8,7 @@ use symbol::Symbol;
 
 pub use crate::nodes::{FallbackNode, SequenceNode};
 pub use crate::parser::{
-    load, load_yaml, node_def, parse_file, parse_nodes, Constructor, NodeDef, Registry,
+    boxify, load, load_yaml, node_def, parse_file, parse_nodes, Constructor, NodeDef, Registry,
 };
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]

@@ -1,6 +1,5 @@
 use crate::{
-    BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, BlackboardValue,
-    Context,
+    BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Context,
 };
 
 pub struct SequenceNode {
@@ -28,6 +27,7 @@ impl BehaviorNode for SequenceNode {
                     return BehaviorResult::Fail;
                 }
                 BehaviorResult::Running => {
+                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
                     self.current_child = Some(i + from);
                     return BehaviorResult::Running;
                 }
@@ -36,6 +36,44 @@ impl BehaviorNode for SequenceNode {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
         }
         self.current_child = None;
+        BehaviorResult::Success
+    }
+
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
+        self.children.push(BehaviorNodeContainer {
+            node,
+            blackboard_map,
+        });
+    }
+}
+
+pub struct ReactiveSequenceNode {
+    children: Vec<BehaviorNodeContainer>,
+}
+
+impl Default for ReactiveSequenceNode {
+    fn default() -> Self {
+        Self { children: vec![] }
+    }
+}
+
+impl BehaviorNode for ReactiveSequenceNode {
+    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        for node in &mut self.children {
+            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+            match node.node.tick(arg, ctx) {
+                BehaviorResult::Fail => {
+                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+                    return BehaviorResult::Fail;
+                }
+                BehaviorResult::Running => {
+                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+                    return BehaviorResult::Running;
+                }
+                _ => (),
+            }
+            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+        }
         BehaviorResult::Success
     }
 
@@ -64,7 +102,7 @@ impl Default for FallbackNode {
 impl BehaviorNode for FallbackNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         let from = self.current_child.unwrap_or(0);
-        for (i, node) in &mut self.children[from..].iter_mut().enumerate() {
+        for (i, node) in self.children[from..].iter_mut().enumerate() {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
             match node.node.tick(arg, ctx) {
                 BehaviorResult::Success => {
@@ -72,6 +110,7 @@ impl BehaviorNode for FallbackNode {
                     return BehaviorResult::Success;
                 }
                 BehaviorResult::Running => {
+                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
                     self.current_child = Some(i + from);
                     return BehaviorResult::Running;
                 }
@@ -80,6 +119,44 @@ impl BehaviorNode for FallbackNode {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
         }
         self.current_child = None;
+        BehaviorResult::Fail
+    }
+
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
+        self.children.push(BehaviorNodeContainer {
+            node,
+            blackboard_map,
+        });
+    }
+}
+
+pub struct ReactiveFallbackNode {
+    children: Vec<BehaviorNodeContainer>,
+}
+
+impl Default for ReactiveFallbackNode {
+    fn default() -> Self {
+        Self { children: vec![] }
+    }
+}
+
+impl BehaviorNode for ReactiveFallbackNode {
+    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        for node in &mut self.children {
+            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+            match node.node.tick(arg, ctx) {
+                BehaviorResult::Success => {
+                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+                    return BehaviorResult::Success;
+                }
+                BehaviorResult::Running => {
+                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+                    return BehaviorResult::Running;
+                }
+                _ => (),
+            }
+            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+        }
         BehaviorResult::Fail
     }
 
