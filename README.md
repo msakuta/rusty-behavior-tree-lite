@@ -85,8 +85,37 @@ root.add_child(Box::new(print_arms), hash_map!());
 and call `tick()`.
 
 ```rust
-let result = root.tick(&mut ctx);
+let result = root.tick(&mut |_| None, &mut ctx);
 ```
+
+The first argument to the `tick` has weird value `&mut |_| None`.
+It is a callback for the behavior nodes to communicate with the environment.
+You could supply a closure to handle messages from the behavior nodes.
+The closure, aliased as `BehaviorCallback`, takes a `&dyn std::any::Any` and returns a `Box<dyn std::any::Any>`,
+which allows the user to pass or return any type, but in exchange, the user needs to
+check the type with `downcast_ref` in order to use it like below.
+
+```rust
+tree.tick(
+    &mut |v: &dyn std::any::Any| {
+        res.push(*v.downcast_ref::<bool>().unwrap());
+        None
+    },
+    &mut Context::default(),
+)
+```
+
+This design was adopted because there is no other good ways to communicate between behavior nodes and the envrionment _whose lifetime is not 'static_.
+
+It is easy to communicate with global static variables, but users often want
+to use behavior tree with limited lifetimes, like enemies' AI in a game.
+Because you can't name a lifetime until you actually use the behavior tree,
+you can't define a type that can send/receive data with arbitrary type having
+lifetime shorter than 'static.
+`std::any::Any` can't circumvent the limitation, because it is also bounded by 'static lifetime,
+so as soon as you put your custom payload into it, you can't put any references other than `&'static`.
+
+With a closure, we don't have to name the lifetime and it will clearly outlive the duration of the closure body, so we can pass references arounds.
 
 ## How to define your own node
 
@@ -100,10 +129,10 @@ For example a node to print the name of the arm can be defined like below.
 struct PrintArmNode;
 
 impl BehaviorNode for PrintArmNode {
-    fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         println!("Arm {:?}", ctx);
 
-        if let Some(arm) = ctx.get::<Arm>("arm") {
+        if let Some(arm) = ctx.get::<Arm>("arm".into()) {
             println!("Got {}", arm.name);
         }
         BehaviorResult::Success
@@ -118,19 +147,53 @@ This is done by `Context::set` method.
 struct PrintBodyNode;
 
 impl BehaviorNode for PrintBodyNode {
-    fn tick(&mut self, ctx: &mut Context) -> BehaviorResult {
-        if let Some(body) = ctx.get::<Body>("body") {
+    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        if let Some(body) = ctx.get::<Body>("body".into()) {
             let left_arm = body.left_arm.clone();
             let right_arm = body.right_arm.clone();
             println!("Got Body: {:?}", body);
-            ctx.set("left_arm", left_arm);
-            ctx.set("right_arm", right_arm);
+            ctx.set("left_arm".into(), left_arm);
+            ctx.set("right_arm".into(), right_arm);
             BehaviorResult::Success
         } else {
             BehaviorResult::Fail
         }
     }
 }
+```
+
+### Optimizing port access by caching symbols
+
+If you use ports a lot, you can try to minimize the cost of comparing and finding the port names as strings by using symbols.
+Symbols are pointers that are guaranteed to compare equal if they point to the same string.
+So you can simply compare the address to check the equality of them.
+
+You can pre-cache the symbol like below.
+
+```rust
+struct PrintBodyNode {
+    body_sym: Symbol,
+    left_arm_sym: Symbol,
+    right_arm_sym: Symbol,
+}
+
+impl PrintBodyNode {
+    fn new() -> Self {
+        Self {
+            body_sym: "body".into(),
+            left_arm_sym: "left_arm".into(),
+            right_arm_sym: "right_arm".into(),
+        }
+    }
+}
+```
+
+And you can use the symbols to access the port and blackboard variables efficiently.
+
+```rust
+ctx.get::<Body>(self.body_sym);
+ctx.set(self.left_arm_sym, left_arm);
+ctx.set(self.right_arm_sym, right_arm);
 ```
 
 See [example code](examples/main.rs) for the full code.
@@ -167,9 +230,39 @@ registry.register("PrintBodyNode", Box::new(PrintBodyNodeConstructor));
 
 Some node types are registered by default, e.g. `SequenceNode` and `FallbackNode`.
 
+### Loading the tree structure from a custom config file
+
+We have specific file format for describing behavior tree structure of our own.
+With this format, the same tree shown as YAML earlier can be written even more concisely like below.
+
+```
+tree main = Sequence {
+  PrintBodyNode
+  Sequence
+    PrintArmNode (arm <- left_arm)
+    PrintArmNode (arm <- right_arm)
+}
+```
+
+It can be converted to an AST with `parse_file` function
+
+```rust
+let (_, tree_source) = behavior_tree_lite::parse_file(source_string)?;
+```
+
+and subsequently be instantiated to a tree.
+
+```rust
+let tree = load(&tree_source)?;
+```
 
 ## TODO
 
-* [ ] Easier way to define constructors (macros?)
+* [x] Easier way to define constructors (macros?)
 * [ ] Full set of control nodes
-* [ ] Performance friendly blackboard keys
+  * [x] Reactive nodes
+  * [ ] Star nodes
+  * [ ] Decorator nodes
+* [x] Performance friendly blackboard keys
+* [x] DSL for defining behavior tree structure
+* [ ] Static type checking for behavior tree definition file

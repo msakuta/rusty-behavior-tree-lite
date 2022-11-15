@@ -1,65 +1,82 @@
-use crate::{error::Error, BehaviorNode, FallbackNode, SequenceNode};
+mod loader;
+mod nom_parser;
+
+use crate::{
+    error::Error,
+    nodes::{ReactiveFallbackNode, ReactiveSequenceNode},
+    BBMap, BehaviorNode, BlackboardValue, FallbackNode, SequenceNode,
+};
+pub use loader::load;
+pub use nom_parser::{node_def, parse_file, parse_nodes, NodeDef};
 use serde_yaml::Value;
 use std::collections::HashMap;
+use symbol::Symbol;
 
-pub trait Constructor {
-    fn build(&self) -> Box<dyn BehaviorNode>;
+pub trait Constructor: Fn() -> Box<dyn BehaviorNode> {}
+
+pub fn boxify<T>(cons: impl (Fn() -> T) + 'static) -> Box<dyn Fn() -> Box<dyn BehaviorNode>>
+where
+    for<'a> T: BehaviorNode + 'static,
+{
+    Box::new(move || Box::new(cons()))
 }
 
 pub struct Registry {
-    node_types: HashMap<String, Box<dyn Constructor>>,
-}
-
-struct SequenceConstructor;
-
-impl Constructor for SequenceConstructor {
-    fn build(&self) -> Box<dyn BehaviorNode> {
-        Box::new(SequenceNode::default())
-    }
-}
-
-struct FallbackConstructor;
-
-impl Constructor for FallbackConstructor {
-    fn build(&self) -> Box<dyn BehaviorNode> {
-        Box::new(FallbackNode::default())
-    }
+    node_types: HashMap<String, Box<dyn Fn() -> Box<dyn BehaviorNode>>>,
+    key_names: HashMap<String, Symbol>,
 }
 
 impl Default for Registry {
     fn default() -> Self {
         let mut ret = Self {
             node_types: HashMap::new(),
+            key_names: HashMap::new(),
         };
-        ret.register("Sequence", Box::new(SequenceConstructor));
-        ret.register("Fallback", Box::new(FallbackConstructor));
+        ret.register("Sequence", boxify(|| SequenceNode::default()));
+        ret.register(
+            "ReactiveSequence",
+            boxify(|| ReactiveSequenceNode::default()),
+        );
+        ret.register("Fallback", boxify(|| FallbackNode::default()));
+        ret.register(
+            "ReactiveFallback",
+            boxify(|| ReactiveFallbackNode::default()),
+        );
         ret
     }
 }
 
 impl Registry {
-    pub fn register(&mut self, type_name: impl ToString, constructor: Box<dyn Constructor>) {
+    pub fn register(
+        &mut self,
+        type_name: impl ToString,
+        constructor: Box<dyn Fn() -> Box<dyn BehaviorNode>>,
+    ) {
         self.node_types.insert(type_name.to_string(), constructor);
     }
 
     pub fn build(&self, type_name: &str) -> Option<Box<dyn BehaviorNode>> {
         self.node_types
             .get(type_name)
-            .map(|constructor| constructor.build())
+            .map(|constructor| constructor())
     }
 }
 
 fn recurse_parse(
     value: &serde_yaml::Value,
     reg: &Registry,
-) -> serde_yaml::Result<Option<(Box<dyn BehaviorNode>, HashMap<String, String>)>> {
-    let mut node = if let Some(node) = value
-        .get(&Value::from("type"))
-        .and_then(|value| value.as_str())
-        .and_then(|value| reg.build(value))
-    {
+) -> serde_yaml::Result<Option<(Box<dyn BehaviorNode>, BBMap)>> {
+    let mut node = if let Some(node) =
+        value
+            .get("type")
+            .and_then(|value| value.as_str())
+            .and_then(|value| {
+                eprintln!("Returning {}", value);
+                reg.build(value)
+            }) {
         node
     } else {
+        eprintln!("Type does not exist in value {:?}", value);
         return Ok(None);
     };
 
@@ -75,9 +92,12 @@ fn recurse_parse(
         ports
             .iter()
             .filter_map(|(key, value)| {
-                key.as_str()
-                    .zip(value.as_str())
-                    .map(|(key, value)| (key.to_string(), value.to_string()))
+                key.as_str().zip(value.as_str()).and_then(|(key, value)| {
+                    Some((
+                        *reg.key_names.get(key)?,
+                        BlackboardValue::Ref(*reg.key_names.get(value)?),
+                    ))
+                })
             })
             .collect()
     } else {
