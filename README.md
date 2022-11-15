@@ -115,7 +115,11 @@ lifetime shorter than 'static.
 `std::any::Any` can't circumvent the limitation, because it is also bounded by 'static lifetime,
 so as soon as you put your custom payload into it, you can't put any references other than `&'static`.
 
-With a closure, we don't have to name the lifetime and it will clearly outlive the duration of the closure body, so we can pass references arounds.
+With a closure, we don't have to name the lifetime and it will clearly outlive the duration of the closure body, so we can pass references around.
+
+Of course, you can also use blackboard variables, but they have the same limitation of lifetimes; you can't pass a reference through blackboard.
+A callback is much more direct (and doesn't require indirection of port names)
+way to communicate with the environment.
 
 ## How to define your own node
 
@@ -238,9 +242,10 @@ With this format, the same tree shown as YAML earlier can be written even more c
 ```
 tree main = Sequence {
   PrintBodyNode
-  Sequence
+  Sequence {
     PrintArmNode (arm <- left_arm)
     PrintArmNode (arm <- right_arm)
+  }
 }
 ```
 
