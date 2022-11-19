@@ -7,7 +7,6 @@ use ::once_cell::sync::{Lazy, OnceCell};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
-use std::mem::{forget, transmute};
 use std::ops::Deref;
 use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
 use std::sync::Mutex;
@@ -125,32 +124,6 @@ impl<S: AsRef<str>> PartialOrd<S> for Symbol {
     }
 }
 
-#[cfg(feature = "gc")]
-impl ::gc::Finalize for Symbol {
-    fn finalize(&self) {}
-}
-
-#[cfg(feature = "gc")]
-unsafe impl ::gc::Trace for Symbol {
-    unsafe_empty_trace!();
-}
-
-#[cfg(feature = "radix_trie")]
-impl radix_trie::TrieKey for Symbol {
-    fn encode_bytes(&self) -> Vec<u8> {
-        self.as_str().encode_bytes()
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Symbol {
-    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Symbol, D::Error> {
-        String::deserialize(de).map(Symbol::from)
-    }
-}
-
 fn leak_string(s: String) -> &'static str {
-    let out = unsafe { transmute(&s as &str) };
-    forget(s);
-    out
+    Box::leak(s.into_boxed_str())
 }
