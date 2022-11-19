@@ -216,3 +216,57 @@ fn test_reactive_fallback_suspend() {
 
     assert_eq!(res, vec![true, true]);
 }
+
+struct AlwaysSucceed;
+
+impl BehaviorNode for AlwaysSucceed {
+    fn tick(&mut self, _arg: BehaviorCallback, _ctx: &mut Context) -> BehaviorResult {
+        BehaviorResult::Success
+    }
+}
+
+struct AlwaysFail;
+
+impl BehaviorNode for AlwaysFail {
+    fn tick(&mut self, _arg: BehaviorCallback, _ctx: &mut Context) -> BehaviorResult {
+        BehaviorResult::Fail
+    }
+}
+
+#[test]
+fn test_force_success() {
+    let mut success_success = ForceSuccess::default();
+    success_success.add_child(Box::new(AlwaysSucceed), BBMap::new());
+
+    assert_eq!(
+        BehaviorResult::Success,
+        success_success.tick(&mut |_| None, &mut Context::default())
+    );
+
+    let mut success_failure = ForceSuccess::default();
+    success_failure.add_child(Box::new(AlwaysFail), BBMap::new());
+
+    assert_eq!(
+        BehaviorResult::Success,
+        success_failure.tick(&mut |_| None, &mut Context::default())
+    );
+}
+
+#[test]
+fn test_force_failure() {
+    let mut failure_success = ForceFailure::default();
+    failure_success.add_child(Box::new(AlwaysSucceed), BBMap::new());
+
+    assert_eq!(
+        BehaviorResult::Fail,
+        failure_success.tick(&mut |_| None, &mut Context::default())
+    );
+
+    let mut failure_failure = ForceFailure::default();
+    failure_failure.add_child(Box::new(AlwaysFail), BBMap::new());
+
+    assert_eq!(
+        BehaviorResult::Fail,
+        failure_failure.tick(&mut |_| None, &mut Context::default())
+    );
+}

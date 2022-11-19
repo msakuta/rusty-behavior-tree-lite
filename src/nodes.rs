@@ -168,5 +168,57 @@ impl BehaviorNode for ReactiveFallbackNode {
     }
 }
 
+#[derive(Default)]
+pub struct ForceSuccess(Option<BehaviorNodeContainer>);
+
+impl BehaviorNode for ForceSuccess {
+    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        if let Some(ref mut node) = self.0 {
+            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+            if let BehaviorResult::Running = node.node.tick(arg, ctx) {
+                std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+                return BehaviorResult::Running;
+            }
+            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+            BehaviorResult::Success
+        } else {
+            BehaviorResult::Fail
+        }
+    }
+
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
+        self.0 = Some(BehaviorNodeContainer {
+            node,
+            blackboard_map,
+        });
+    }
+}
+
+#[derive(Default)]
+pub struct ForceFailure(Option<BehaviorNodeContainer>);
+
+impl BehaviorNode for ForceFailure {
+    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        if let Some(ref mut node) = self.0 {
+            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+            if let BehaviorResult::Running = node.node.tick(arg, ctx) {
+                std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+                return BehaviorResult::Running;
+            }
+            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+            BehaviorResult::Fail
+        } else {
+            BehaviorResult::Fail
+        }
+    }
+
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
+        self.0 = Some(BehaviorNodeContainer {
+            node,
+            blackboard_map,
+        });
+    }
+}
+
 #[cfg(test)]
 mod test;
