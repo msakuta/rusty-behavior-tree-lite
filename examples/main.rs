@@ -57,7 +57,7 @@ fn main() {
     };
 
     let mut ctx = Context::default();
-    ctx.set("body".into(), body);
+    ctx.set("body", body);
 
     let mut root = SequenceNode::default();
 

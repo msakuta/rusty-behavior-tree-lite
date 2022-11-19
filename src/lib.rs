@@ -47,7 +47,7 @@ impl<'e, T> Context<'e, T> {
 }
 
 impl<'e, E> Context<'e, E> {
-    pub fn get<'a, T: 'static>(&'a self, key: Symbol) -> Option<&'a T>
+    pub fn get<'a, T: 'static>(&'a self, key: impl Into<Symbol>) -> Option<&'a T>
     where
         'e: 'a,
     {
@@ -67,7 +67,8 @@ impl<'e, E> Context<'e, E> {
         })
     }
 
-    pub fn set<T: 'static>(&mut self, key: Symbol, val: T) {
+    pub fn set<T: 'static>(&mut self, key: impl Into<Symbol>, val: T) {
+        let key = key.into();
         let mapped = self.blackboard_map.get(&key);
         let mapped = match mapped {
             None => key,

@@ -86,7 +86,7 @@ fn main() -> anyhow::Result<()> {
     };
 
     let mut ctx = Context::default();
-    ctx.set("body".into(), body);
+    ctx.set("body", body);
 
     let mut root =
         load(&tree_source, &registry).map_err(|e| anyhow::format_err!("parse error: {e}"))?;

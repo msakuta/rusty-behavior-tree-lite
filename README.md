@@ -136,7 +136,7 @@ impl BehaviorNode for PrintArmNode {
     fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         println!("Arm {:?}", ctx);
 
-        if let Some(arm) = ctx.get::<Arm>("arm".into()) {
+        if let Some(arm) = ctx.get::<Arm>("arm") {
             println!("Got {}", arm.name);
         }
         BehaviorResult::Success
@@ -152,12 +152,12 @@ struct PrintBodyNode;
 
 impl BehaviorNode for PrintBodyNode {
     fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        if let Some(body) = ctx.get::<Body>("body".into()) {
+        if let Some(body) = ctx.get::<Body>("body") {
             let left_arm = body.left_arm.clone();
             let right_arm = body.right_arm.clone();
             println!("Got Body: {:?}", body);
-            ctx.set("left_arm".into(), left_arm);
-            ctx.set("right_arm".into(), right_arm);
+            ctx.set("left_arm", left_arm);
+            ctx.set("right_arm", right_arm);
             BehaviorResult::Success
         } else {
             BehaviorResult::Fail
@@ -172,32 +172,28 @@ If you use ports a lot, you can try to minimize the cost of comparing and findin
 Symbols are pointers that are guaranteed to compare equal if they point to the same string.
 So you can simply compare the address to check the equality of them.
 
-You can pre-cache the symbol like below.
+You can use `Lazy<Symbol>` to use cache-on-first-use pattern on the symbol like below.
+`Lazy` is re-exported type from `once_cell`.
 
 ```rust
-struct PrintBodyNode {
-    body_sym: Symbol,
-    left_arm_sym: Symbol,
-    right_arm_sym: Symbol,
-}
+use ::behavior_tree_lite::{BehaviorNode, Symbol, Lazy};
 
-impl PrintBodyNode {
-    fn new() -> Self {
-        Self {
-            body_sym: "body".into(),
-            left_arm_sym: "left_arm".into(),
-            right_arm_sym: "right_arm".into(),
+struct PrintBodyNode;
+
+impl BehaviorNode for PrintBodyNode {
+    fn tick(&mut self, _: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        static BODY_SYM: Lazy<Symbol> = Lazy::new(|| "body".into());
+        static LEFT_ARM_SYM: Lazy<Symbol> = Lazy::new(|| "left_arm".into());
+        static RIGHT_ARM_SYM: Lazy<Symbol> = Lazy::new(|| "right_arm".into());
+
+        if let Some(body) = ctx.get::<Body>(*BODY_SYM) {
+            // ...
+            BehaviorResult::Success
+        } else {
+            BehaviorResult::Fail
         }
     }
 }
-```
-
-And you can use the symbols to access the port and blackboard variables efficiently.
-
-```rust
-ctx.get::<Body>(self.body_sym);
-ctx.set(self.left_arm_sym, left_arm);
-ctx.set(self.right_arm_sym, right_arm);
 ```
 
 See [example code](examples/main.rs) for the full code.
