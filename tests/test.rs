@@ -1,8 +1,8 @@
 // use std::convert::From;
 use behavior_tree_lite::{
     hash_map, BehaviorCallback, BehaviorNode, BehaviorResult, Context, FallbackNode, SequenceNode,
+    Symbol,
 };
-use symbol::Symbol;
 
 struct CheckMeNode;
 

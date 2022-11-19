@@ -1,15 +1,16 @@
 mod error;
 mod nodes;
 mod parser;
+mod symbol;
 
 use std::any::Any;
 use std::collections::HashMap;
-use symbol::Symbol;
 
 pub use crate::nodes::{FallbackNode, SequenceNode};
 pub use crate::parser::{
     boxify, load, load_yaml, node_def, parse_file, parse_nodes, Constructor, NodeDef, Registry,
 };
+pub use crate::symbol::Symbol;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum BehaviorResult {

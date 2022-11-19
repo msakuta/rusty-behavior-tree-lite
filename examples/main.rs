@@ -1,8 +1,7 @@
 use ::behavior_tree_lite::{
     hash_map, BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context,
-    SequenceNode,
+    SequenceNode, Symbol,
 };
-use ::symbol::Symbol;
 
 #[derive(Clone, Debug)]
 struct Arm {

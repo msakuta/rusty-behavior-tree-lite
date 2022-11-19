@@ -1,9 +1,8 @@
 use ::behavior_tree_lite::{
-    load, parse_file, BehaviorCallback, BehaviorNode, BehaviorResult, Context, Registry,
+    load, parse_file, BehaviorCallback, BehaviorNode, BehaviorResult, Context, Registry, Symbol,
 };
 
 use std::fs;
-use symbol::Symbol;
 
 #[derive(Clone, Debug)]
 struct Arm {

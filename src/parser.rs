@@ -1,6 +1,7 @@
 mod loader;
 mod nom_parser;
 
+use crate::symbol::Symbol;
 use crate::{
     error::Error,
     nodes::{ReactiveFallbackNode, ReactiveSequenceNode},
@@ -10,7 +11,6 @@ pub use loader::load;
 pub use nom_parser::{node_def, parse_file, parse_nodes, NodeDef};
 use serde_yaml::Value;
 use std::collections::HashMap;
-use symbol::Symbol;
 
 pub trait Constructor: Fn() -> Box<dyn BehaviorNode> {}
 
