@@ -54,6 +54,10 @@ impl Symbol {
 
         Symbol::from(n)
     }
+
+    pub fn count() -> usize {
+        SYMBOL_HEAP.lock().unwrap().len()
+    }
 }
 
 impl Debug for Symbol {

@@ -11,6 +11,7 @@ pub use crate::parser::{
     boxify, load, load_yaml, node_def, parse_file, parse_nodes, Constructor, NodeDef, Registry,
 };
 pub use crate::symbol::Symbol;
+pub use ::once_cell::sync::*;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum BehaviorResult {

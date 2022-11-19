@@ -1,5 +1,5 @@
 use ::behavior_tree_lite::{
-    hash_map, BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context,
+    hash_map, BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context, Lazy,
     SequenceNode, Symbol,
 };
 
@@ -18,10 +18,9 @@ struct PrintArmNode;
 
 impl BehaviorNode for PrintArmNode {
     fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        println!("Arm {:?}", ctx);
-
-        if let Some(arm) = ctx.get::<Arm>("arm".into()) {
-            println!("Got {}", arm.name);
+        static ARM_SYM: Lazy<Symbol> = Lazy::new(|| "arm".into());
+        if let Some(arm) = ctx.get::<Arm>(*ARM_SYM) {
+            println!("PrintArmNode: {}", arm.name);
         }
         BehaviorResult::Success
     }
@@ -31,12 +30,15 @@ struct PrintBodyNode;
 
 impl BehaviorNode for PrintBodyNode {
     fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        if let Some(body) = ctx.get::<Body>(Symbol::from("body")) {
+        static BODY_SYM: Lazy<Symbol> = Lazy::new(|| "body".into());
+        static LEFT_ARM_SYM: Lazy<Symbol> = Lazy::new(|| "left_arm".into());
+        static RIGHT_ARM_SYM: Lazy<Symbol> = Lazy::new(|| "right_arm".into());
+        if let Some(body) = ctx.get::<Body>(*BODY_SYM) {
             let left_arm = body.left_arm.clone();
             let right_arm = body.right_arm.clone();
-            println!("Got Body: {:?}", body);
-            ctx.set("left_arm".into(), left_arm);
-            ctx.set("right_arm".into(), right_arm);
+            println!("PrintBodyNode: {:?}", body);
+            ctx.set(*LEFT_ARM_SYM, left_arm);
+            ctx.set(*RIGHT_ARM_SYM, right_arm);
             BehaviorResult::Success
         } else {
             BehaviorResult::Fail
@@ -74,4 +76,6 @@ fn main() {
     root.add_child(Box::new(print_arms), hash_map!());
 
     root.tick(&mut |_| None, &mut ctx);
+
+    println!("Total symbols: {}", Symbol::count());
 }
