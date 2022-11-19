@@ -27,22 +27,27 @@ pub enum BlackboardValue {
     Literal(String),
 }
 
+pub type Blackboard = HashMap<Symbol, Box<dyn Any>>;
 pub type BBMap = HashMap<Symbol, BlackboardValue>;
 
 #[derive(Default, Debug)]
 pub struct Context<'e, T: 'e = ()> {
-    blackboard: HashMap<Symbol, Box<dyn Any>>,
+    blackboard: Blackboard,
     blackboard_map: BBMap,
     pub env: Option<&'e mut T>,
 }
 
 impl<'e, T> Context<'e, T> {
-    pub fn new(blackboard: HashMap<Symbol, Box<dyn Any>>) -> Self {
+    pub fn new(blackboard: Blackboard) -> Self {
         Self {
             blackboard,
-            blackboard_map: HashMap::new(),
+            blackboard_map: BBMap::new(),
             env: None,
         }
+    }
+
+    pub fn take_blackboard(self) -> Blackboard {
+        self.blackboard
     }
 }
 
