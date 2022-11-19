@@ -19,19 +19,22 @@ static SYMBOL_HEAP: Lazy<Mutex<HashSet<&'static str>>> = Lazy::new(|| Mutex::new
 #[cfg_attr(feature = "serde", serde(transparent))]
 #[derive(Clone, Copy, Eq, Hash)]
 pub struct Symbol {
-    s: &'static str,
+    s: *const u8,
 }
+
+unsafe impl Send for Symbol {}
+unsafe impl Sync for Symbol {}
 
 impl Symbol {
     /// Retrieves the address of the backing string.
     pub fn addr(self) -> usize {
-        self.s.as_ptr() as usize
+        self.s as usize
     }
 
     /// Retrieves the string from the Symbol.
-    pub fn as_str(self) -> &'static str {
-        self.s
-    }
+    // pub fn as_str(self) -> &'static str {
+    //     self.s
+    // }
 
     /// Generates a new symbol with a name of the form `G#n`, where `n` is some positive integer.
     pub fn gensym() -> Symbol {
@@ -62,22 +65,22 @@ impl Symbol {
 
 impl Debug for Symbol {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
-        Debug::fmt(self.s, fmt)
+        Debug::fmt("<Symbol>", fmt)
     }
 }
 
-impl Deref for Symbol {
-    type Target = str;
-    fn deref(&self) -> &str {
-        self.s
-    }
-}
+// impl Deref for Symbol {
+//     type Target = str;
+//     fn deref(&self) -> &str {
+//         self.s
+//     }
+// }
 
-impl Display for Symbol {
-    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
-        fmt.write_str(self.s)
-    }
-}
+// impl Display for Symbol {
+//     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+//         fmt.write_str(self.s)
+//     }
+// }
 
 impl<S: AsRef<str>> From<S> for Symbol {
     fn from(s: S) -> Symbol {
@@ -92,7 +95,7 @@ impl<S: AsRef<str>> From<S> for Symbol {
                 s
             }
         };
-        Symbol { s }
+        Symbol { s: &s.as_bytes()[0] as *const u8 }
     }
 }
 
@@ -116,17 +119,17 @@ impl PartialOrd for Symbol {
     }
 }
 
-impl<S: AsRef<str>> PartialEq<S> for Symbol {
-    fn eq(&self, other: &S) -> bool {
-        self.partial_cmp(&other.as_ref()) == Some(Ordering::Equal)
-    }
-}
+// impl<S: AsRef<str>> PartialEq<S> for Symbol {
+//     fn eq(&self, other: &S) -> bool {
+//         self.partial_cmp(&other.as_ref()) == Some(Ordering::Equal)
+//     }
+// }
 
-impl<S: AsRef<str>> PartialOrd<S> for Symbol {
-    fn partial_cmp(&self, other: &S) -> Option<Ordering> {
-        self.s.partial_cmp(other.as_ref())
-    }
-}
+// impl<S: AsRef<str>> PartialOrd<S> for Symbol {
+//     fn partial_cmp(&self, other: &S) -> Option<Ordering> {
+//         self.s.partial_cmp(other.as_ref())
+//     }
+// }
 
 fn leak_string(s: String) -> &'static str {
     Box::leak(s.into_boxed_str())
