@@ -5,13 +5,13 @@
 
 use ::once_cell::sync::{Lazy, OnceCell};
 use std::cmp::Ordering;
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::ops::Deref;
 use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
 use std::sync::Mutex;
 
-static SYMBOL_HEAP: Lazy<Mutex<BTreeSet<&'static str>>> = Lazy::new(|| Mutex::new(BTreeSet::new()));
+static SYMBOL_HEAP: Lazy<Mutex<HashSet<&'static str>>> = Lazy::new(|| Mutex::new(HashSet::new()));
 
 /// An interned string with O(1) equality.
 #[allow(clippy::derive_hash_xor_eq)]
@@ -78,15 +78,15 @@ impl Display for Symbol {
 impl<S: AsRef<str>> From<S> for Symbol {
     fn from(s: S) -> Symbol {
         let s = s.as_ref();
-        {
-            let mut heap = SYMBOL_HEAP.lock().unwrap();
-            if heap.get(s).is_none() {
-                heap.insert(leak_string(s.to_owned()));
-            }
-        }
         let s = {
-            let heap = SYMBOL_HEAP.lock().unwrap();
-            *heap.get(s).unwrap()
+            let mut heap = SYMBOL_HEAP.lock().unwrap();
+            if let Some(s) = heap.get(s) {
+                s
+            } else {
+                let s = leak_string(s.to_owned());
+                heap.insert(s);
+                s
+            }
         };
         Symbol { s }
     }
