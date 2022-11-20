@@ -61,19 +61,24 @@ fn main() {
 
     let mut root = SequenceNode::default();
 
-    root.add_child(Box::new(PrintBodyNode), hash_map!());
+    root.add_child(Box::new(PrintBodyNode), hash_map!())
+        .unwrap();
 
     let mut print_arms = SequenceNode::default();
-    print_arms.add_child(
-        Box::new(PrintArmNode),
-        hash_map!("arm" => BlackboardValue::Ref("left_arm".into())),
-    );
-    print_arms.add_child(
-        Box::new(PrintArmNode),
-        hash_map!("arm" => BlackboardValue::Ref("right_arm".into())),
-    );
+    print_arms
+        .add_child(
+            Box::new(PrintArmNode),
+            hash_map!("arm" => BlackboardValue::Ref("left_arm".into())),
+        )
+        .unwrap();
+    print_arms
+        .add_child(
+            Box::new(PrintArmNode),
+            hash_map!("arm" => BlackboardValue::Ref("right_arm".into())),
+        )
+        .unwrap();
 
-    root.add_child(Box::new(print_arms), hash_map!());
+    root.add_child(Box::new(print_arms), hash_map!()).unwrap();
 
     root.tick(&mut |_| None, &mut ctx);
 

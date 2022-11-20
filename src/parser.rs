@@ -2,7 +2,7 @@ mod loader;
 mod nom_parser;
 
 use crate::{
-    error::Error,
+    error::LoadYamlError,
     nodes::{
         ForceFailureNode, ForceSuccessNode, InverterNode, ReactiveFallbackNode,
         ReactiveSequenceNode,
@@ -71,7 +71,7 @@ impl Registry {
 fn recurse_parse(
     value: &serde_yaml::Value,
     reg: &Registry,
-) -> serde_yaml::Result<Option<(Box<dyn BehaviorNode>, BBMap)>> {
+) -> Result<Option<(Box<dyn BehaviorNode>, BBMap)>, LoadYamlError> {
     let mut node = if let Some(node) =
         value
             .get("type")
@@ -89,7 +89,8 @@ fn recurse_parse(
     if let Some(Value::Sequence(children)) = value.get(&Value::from("children")) {
         for child in children {
             if let Some(built_child) = recurse_parse(child, reg)? {
-                node.add_child(built_child.0, built_child.1);
+                node.add_child(built_child.0, built_child.1)
+                    .map_err(|e| LoadYamlError::AddChildError(e))?;
             }
         }
     }
@@ -116,7 +117,7 @@ fn recurse_parse(
 pub fn load_yaml(
     yaml: &str,
     reg: &Registry,
-) -> Result<HashMap<String, Box<dyn BehaviorNode>>, Error> {
+) -> Result<HashMap<String, Box<dyn BehaviorNode>>, LoadYamlError> {
     let yaml = serde_yaml::from_str(yaml)?;
     if let Value::Mapping(root) = yaml {
         // if let Some(Value::Mapping(nodes)) = root.get(&Value::from("nodes")) {
@@ -132,15 +133,15 @@ pub fn load_yaml(
                 .iter()
                 .map(|(name, value)| {
                     Ok((
-                        name.as_str().ok_or(Error::Missing)?.to_string(),
+                        name.as_str().ok_or(LoadYamlError::Missing)?.to_string(),
                         recurse_parse(value, reg)?
                             .map(|v| v.0)
-                            .ok_or_else(|| Error::Missing)?,
+                            .ok_or_else(|| LoadYamlError::Missing)?,
                     ))
                 })
-                .collect::<Result<_, Error>>()?);
+                .collect::<Result<_, LoadYamlError>>()?);
         }
     }
 
-    Err(Error::Missing)
+    Err(LoadYamlError::Missing)
 }

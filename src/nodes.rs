@@ -1,4 +1,5 @@
 use crate::{
+    error::{AddChildError, AddChildResult},
     BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Context,
 };
 
@@ -39,11 +40,12 @@ impl BehaviorNode for SequenceNode {
         BehaviorResult::Success
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,
         });
+        Ok(())
     }
 }
 
@@ -77,11 +79,12 @@ impl BehaviorNode for ReactiveSequenceNode {
         BehaviorResult::Success
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,
         });
+        Ok(())
     }
 }
 
@@ -122,11 +125,12 @@ impl BehaviorNode for FallbackNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,
         });
+        Ok(())
     }
 }
 
@@ -160,11 +164,12 @@ impl BehaviorNode for ReactiveFallbackNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,
         });
+        Ok(())
     }
 }
 
@@ -186,11 +191,16 @@ impl BehaviorNode for ForceSuccessNode {
         }
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
-        self.0 = Some(BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        });
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+        if self.0.is_none() {
+            self.0 = Some(BehaviorNodeContainer {
+                node,
+                blackboard_map,
+            });
+            Ok(())
+        } else {
+            Err(AddChildError::TooManyNodes)
+        }
     }
 }
 
@@ -212,11 +222,16 @@ impl BehaviorNode for ForceFailureNode {
         }
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
-        self.0 = Some(BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        });
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+        if self.0.is_none() {
+            self.0 = Some(BehaviorNodeContainer {
+                node,
+                blackboard_map,
+            });
+            Ok(())
+        } else {
+            Err(AddChildError::TooManyNodes)
+        }
     }
 }
 
@@ -239,11 +254,16 @@ impl BehaviorNode for InverterNode {
         }
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
-        self.0 = Some(BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        });
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+        if self.0.is_none() {
+            self.0 = Some(BehaviorNodeContainer {
+                node,
+                blackboard_map,
+            });
+            Ok(())
+        } else {
+            Err(AddChildError::TooManyNodes)
+        }
     }
 }
 

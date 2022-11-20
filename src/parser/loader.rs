@@ -1,15 +1,15 @@
 use super::nom_parser::{TreeDef, TreeSource};
-use crate::{BBMap, BehaviorNode, Registry};
+use crate::{error::LoadError, BBMap, BehaviorNode, Registry};
 
 pub fn load(
     tree_source: &TreeSource,
     registry: &Registry,
-) -> Result<Box<dyn BehaviorNode>, String> {
+) -> Result<Box<dyn BehaviorNode>, LoadError> {
     let main = tree_source
         .tree_defs
         .iter()
         .find(|tree| tree.name == "main")
-        .ok_or_else(|| "Main tree does not exist".to_string())?;
+        .ok_or_else(|| LoadError::MissingTree)?;
 
     load_recurse(&main.root, registry, tree_source)
 }
@@ -18,17 +18,17 @@ fn load_recurse(
     parent: &TreeDef,
     registry: &Registry,
     tree_source: &TreeSource,
-) -> Result<Box<dyn BehaviorNode>, String> {
-    let mut ret = registry
-        .build(parent.ty)
-        .or_else(|| {
-            tree_source
-                .tree_defs
-                .iter()
-                .find(|tree| tree.name == parent.ty)
-                .and_then(|tree| load_recurse(&tree.root, registry, tree_source).ok())
-        })
-        .ok_or_else(|| format!("Node type or subtree name not found {:?}", parent.ty))?;
+) -> Result<Box<dyn BehaviorNode>, LoadError> {
+    let mut ret = if let Some(ret) = registry.build(parent.ty) {
+        ret
+    } else {
+        let tree = tree_source
+            .tree_defs
+            .iter()
+            .find(|tree| tree.name == parent.ty)
+            .ok_or_else(|| LoadError::MissingNode(parent.ty.to_owned()))?;
+        load_recurse(&tree.root, registry, tree_source)?
+    };
 
     for child in &parent.children {
         let mut bbmap = BBMap::new();
@@ -45,7 +45,8 @@ fn load_recurse(
                 },
             );
         }
-        ret.add_child(load_recurse(child, registry, tree_source)?, bbmap);
+        ret.add_child(load_recurse(child, registry, tree_source)?, bbmap)
+            .map_err(|e| LoadError::AddChildError(e, parent.ty.to_string()))?;
     }
 
     Ok(ret)

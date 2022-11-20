@@ -1,4 +1,4 @@
-mod error;
+pub mod error;
 mod nodes;
 mod parser;
 mod symbol;
@@ -12,6 +12,7 @@ pub use crate::parser::{
 };
 pub use crate::symbol::Symbol;
 pub use ::once_cell::sync::*;
+use error::{AddChildError, AddChildResult};
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum BehaviorResult {
@@ -93,7 +94,9 @@ pub type BehaviorCallback<'a> = &'a mut dyn FnMut(&dyn Any) -> Option<Box<dyn An
 pub trait BehaviorNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult;
 
-    fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: BBMap) {}
+    fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: BBMap) -> AddChildResult {
+        Err(AddChildError::TooManyNodes)
+    }
 }
 
 pub struct BehaviorNodeContainer {

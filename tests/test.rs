@@ -40,13 +40,13 @@ impl BehaviorNode for AlwaysFail {
 #[test]
 fn test_sequence() {
     let mut seq = SequenceNode::default();
-    seq.add_child(Box::new(AlwaysSucceed), hash_map!());
-    seq.add_child(Box::new(AlwaysSucceed), hash_map!());
+    seq.add_child(Box::new(AlwaysSucceed), hash_map!()).unwrap();
+    seq.add_child(Box::new(AlwaysSucceed), hash_map!()).unwrap();
     assert_eq!(
         seq.tick(&mut |_| None, &mut Context::default()),
         BehaviorResult::Success
     );
-    seq.add_child(Box::new(AlwaysFail), hash_map!());
+    seq.add_child(Box::new(AlwaysFail), hash_map!()).unwrap();
     assert_eq!(
         seq.tick(&mut |_| None, &mut Context::default()),
         BehaviorResult::Fail
@@ -56,13 +56,13 @@ fn test_sequence() {
 #[test]
 fn test_fallback() {
     let mut seq = FallbackNode::default();
-    seq.add_child(Box::new(AlwaysFail), hash_map!());
-    seq.add_child(Box::new(AlwaysFail), hash_map!());
+    seq.add_child(Box::new(AlwaysFail), hash_map!()).unwrap();
+    seq.add_child(Box::new(AlwaysFail), hash_map!()).unwrap();
     assert_eq!(
         seq.tick(&mut |_| None, &mut Context::default()),
         BehaviorResult::Fail
     );
-    seq.add_child(Box::new(AlwaysSucceed), hash_map!());
+    seq.add_child(Box::new(AlwaysSucceed), hash_map!()).unwrap();
     assert_eq!(
         seq.tick(&mut |_| None, &mut Context::default()),
         BehaviorResult::Success

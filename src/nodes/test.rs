@@ -19,8 +19,10 @@ fn test_sequence() {
     };
 
     let mut tree = SequenceNode::default();
-    tree.add_child(Box::new(Append::<true>), BBMap::new());
-    tree.add_child(Box::new(Append::<false>), BBMap::new());
+    tree.add_child(Box::new(Append::<true>), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(Append::<false>), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         BehaviorResult::Success,
@@ -30,8 +32,10 @@ fn test_sequence() {
     assert_eq!(res, vec![true, false]);
 
     let mut tree = SequenceNode::default();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new());
-    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new());
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         BehaviorResult::Fail,
@@ -52,9 +56,11 @@ fn test_sequence_suspend() {
     let mut res = vec![];
 
     let mut tree = SequenceNode::default();
-    tree.add_child(Box::new(Append::<true>), BBMap::new());
-    tree.add_child(Box::new(Suspend), BBMap::new());
-    tree.add_child(Box::new(Append::<false>), BBMap::new());
+    tree.add_child(Box::new(Append::<true>), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(Suspend), BBMap::new()).unwrap();
+    tree.add_child(Box::new(Append::<false>), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         tree.tick(
@@ -86,9 +92,11 @@ fn test_reactive_sequence_suspend() {
     let mut res = vec![];
 
     let mut tree = ReactiveSequenceNode::default();
-    tree.add_child(Box::new(Append::<true>), BBMap::new());
-    tree.add_child(Box::new(Suspend), BBMap::new());
-    tree.add_child(Box::new(Append::<false>), BBMap::new());
+    tree.add_child(Box::new(Append::<true>), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(Suspend), BBMap::new()).unwrap();
+    tree.add_child(Box::new(Append::<false>), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         tree.tick(
@@ -134,8 +142,10 @@ fn test_fallback() {
     };
 
     let mut tree = FallbackNode::default();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new());
-    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new());
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         BehaviorResult::Fail,
@@ -145,8 +155,10 @@ fn test_fallback() {
     assert_eq!(res, vec![true, false]);
 
     let mut tree = SequenceNode::default();
-    tree.add_child(Box::new(Append::<true>), BBMap::new());
-    tree.add_child(Box::new(Append::<false>), BBMap::new());
+    tree.add_child(Box::new(Append::<true>), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(Append::<false>), BBMap::new())
+        .unwrap();
 }
 
 #[test]
@@ -154,9 +166,11 @@ fn test_fallback_suspend() {
     let mut res = vec![];
 
     let mut tree = FallbackNode::default();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new());
-    tree.add_child(Box::new(Suspend), BBMap::new());
-    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new());
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(Suspend), BBMap::new()).unwrap();
+    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         tree.tick(
@@ -188,9 +202,11 @@ fn test_reactive_fallback_suspend() {
     let mut res = vec![];
 
     let mut tree = ReactiveFallbackNode::default();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new());
-    tree.add_child(Box::new(Suspend), BBMap::new());
-    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new());
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(Suspend), BBMap::new()).unwrap();
+    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         tree.tick(
@@ -236,7 +252,9 @@ impl BehaviorNode for AlwaysFail {
 #[test]
 fn test_force_success() {
     let mut success_success = ForceSuccessNode::default();
-    success_success.add_child(Box::new(AlwaysSucceed), BBMap::new());
+    success_success
+        .add_child(Box::new(AlwaysSucceed), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         BehaviorResult::Success,
@@ -244,7 +262,9 @@ fn test_force_success() {
     );
 
     let mut success_failure = ForceSuccessNode::default();
-    success_failure.add_child(Box::new(AlwaysFail), BBMap::new());
+    success_failure
+        .add_child(Box::new(AlwaysFail), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         BehaviorResult::Success,
@@ -255,7 +275,9 @@ fn test_force_success() {
 #[test]
 fn test_force_failure() {
     let mut failure_success = ForceFailureNode::default();
-    failure_success.add_child(Box::new(AlwaysSucceed), BBMap::new());
+    failure_success
+        .add_child(Box::new(AlwaysSucceed), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         BehaviorResult::Fail,
@@ -263,7 +285,9 @@ fn test_force_failure() {
     );
 
     let mut failure_failure = ForceFailureNode::default();
-    failure_failure.add_child(Box::new(AlwaysFail), BBMap::new());
+    failure_failure
+        .add_child(Box::new(AlwaysFail), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         BehaviorResult::Fail,
@@ -274,7 +298,9 @@ fn test_force_failure() {
 #[test]
 fn test_inverter() {
     let mut invert_success = InverterNode::default();
-    invert_success.add_child(Box::new(AlwaysSucceed), BBMap::new());
+    invert_success
+        .add_child(Box::new(AlwaysSucceed), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         BehaviorResult::Fail,
@@ -282,7 +308,9 @@ fn test_inverter() {
     );
 
     let mut invert_failure = InverterNode::default();
-    invert_failure.add_child(Box::new(AlwaysFail), BBMap::new());
+    invert_failure
+        .add_child(Box::new(AlwaysFail), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         BehaviorResult::Success,
@@ -290,7 +318,9 @@ fn test_inverter() {
     );
 
     let mut invert_running = InverterNode::default();
-    invert_running.add_child(Box::new(Suspend), BBMap::new());
+    invert_running
+        .add_child(Box::new(Suspend), BBMap::new())
+        .unwrap();
 
     assert_eq!(
         BehaviorResult::Running,
