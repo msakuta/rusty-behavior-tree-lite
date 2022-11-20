@@ -3,7 +3,10 @@ mod nom_parser;
 
 use crate::{
     error::Error,
-    nodes::{ForceFailure, ForceSuccess, InverterNode, ReactiveFallbackNode, ReactiveSequenceNode},
+    nodes::{
+        ForceFailureNode, ForceSuccessNode, InverterNode, ReactiveFallbackNode,
+        ReactiveSequenceNode,
+    },
     symbol::Symbol,
     BBMap, BehaviorNode, BlackboardValue, FallbackNode, SequenceNode,
 };
@@ -42,8 +45,8 @@ impl Default for Registry {
             "ReactiveFallback",
             boxify(|| ReactiveFallbackNode::default()),
         );
-        ret.register("ForceSuccess", boxify(|| ForceSuccess::default()));
-        ret.register("ForceFailure", boxify(|| ForceFailure::default()));
+        ret.register("ForceSuccess", boxify(|| ForceSuccessNode::default()));
+        ret.register("ForceFailure", boxify(|| ForceFailureNode::default()));
         ret.register("Inverter", boxify(|| InverterNode::default()));
         ret
     }

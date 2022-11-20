@@ -235,7 +235,7 @@ impl BehaviorNode for AlwaysFail {
 
 #[test]
 fn test_force_success() {
-    let mut success_success = ForceSuccess::default();
+    let mut success_success = ForceSuccessNode::default();
     success_success.add_child(Box::new(AlwaysSucceed), BBMap::new());
 
     assert_eq!(
@@ -243,7 +243,7 @@ fn test_force_success() {
         success_success.tick(&mut |_| None, &mut Context::default())
     );
 
-    let mut success_failure = ForceSuccess::default();
+    let mut success_failure = ForceSuccessNode::default();
     success_failure.add_child(Box::new(AlwaysFail), BBMap::new());
 
     assert_eq!(
@@ -254,7 +254,7 @@ fn test_force_success() {
 
 #[test]
 fn test_force_failure() {
-    let mut failure_success = ForceFailure::default();
+    let mut failure_success = ForceFailureNode::default();
     failure_success.add_child(Box::new(AlwaysSucceed), BBMap::new());
 
     assert_eq!(
@@ -262,7 +262,7 @@ fn test_force_failure() {
         failure_success.tick(&mut |_| None, &mut Context::default())
     );
 
-    let mut failure_failure = ForceFailure::default();
+    let mut failure_failure = ForceFailureNode::default();
     failure_failure.add_child(Box::new(AlwaysFail), BBMap::new());
 
     assert_eq!(

@@ -169,9 +169,9 @@ impl BehaviorNode for ReactiveFallbackNode {
 }
 
 #[derive(Default)]
-pub struct ForceSuccess(Option<BehaviorNodeContainer>);
+pub struct ForceSuccessNode(Option<BehaviorNodeContainer>);
 
-impl BehaviorNode for ForceSuccess {
+impl BehaviorNode for ForceSuccessNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         if let Some(ref mut node) = self.0 {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
@@ -195,9 +195,9 @@ impl BehaviorNode for ForceSuccess {
 }
 
 #[derive(Default)]
-pub struct ForceFailure(Option<BehaviorNodeContainer>);
+pub struct ForceFailureNode(Option<BehaviorNodeContainer>);
 
-impl BehaviorNode for ForceFailure {
+impl BehaviorNode for ForceFailureNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         if let Some(ref mut node) = self.0 {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
