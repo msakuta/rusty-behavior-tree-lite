@@ -220,5 +220,32 @@ impl BehaviorNode for ForceFailure {
     }
 }
 
+#[derive(Default)]
+pub struct InverterNode(Option<BehaviorNodeContainer>);
+
+impl BehaviorNode for InverterNode {
+    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        if let Some(ref mut node) = self.0 {
+            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+            let res = match node.node.tick(arg, ctx) {
+                BehaviorResult::Running => BehaviorResult::Running,
+                BehaviorResult::Success => BehaviorResult::Fail,
+                BehaviorResult::Fail => BehaviorResult::Success,
+            };
+            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+            res
+        } else {
+            BehaviorResult::Fail
+        }
+    }
+
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) {
+        self.0 = Some(BehaviorNodeContainer {
+            node,
+            blackboard_map,
+        });
+    }
+}
+
 #[cfg(test)]
 mod test;

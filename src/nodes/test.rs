@@ -270,3 +270,30 @@ fn test_force_failure() {
         failure_failure.tick(&mut |_| None, &mut Context::default())
     );
 }
+
+#[test]
+fn test_inverter() {
+    let mut invert_success = InverterNode::default();
+    invert_success.add_child(Box::new(AlwaysSucceed), BBMap::new());
+
+    assert_eq!(
+        BehaviorResult::Fail,
+        invert_success.tick(&mut |_| None, &mut Context::default())
+    );
+
+    let mut invert_failure = InverterNode::default();
+    invert_failure.add_child(Box::new(AlwaysFail), BBMap::new());
+
+    assert_eq!(
+        BehaviorResult::Success,
+        invert_failure.tick(&mut |_| None, &mut Context::default())
+    );
+
+    let mut invert_running = InverterNode::default();
+    invert_running.add_child(Box::new(Suspend), BBMap::new());
+
+    assert_eq!(
+        BehaviorResult::Running,
+        invert_running.tick(&mut |_| None, &mut Context::default())
+    );
+}

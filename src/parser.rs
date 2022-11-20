@@ -1,10 +1,10 @@
 mod loader;
 mod nom_parser;
 
-use crate::symbol::Symbol;
 use crate::{
     error::Error,
-    nodes::{ForceFailure, ForceSuccess, ReactiveFallbackNode, ReactiveSequenceNode},
+    nodes::{ForceFailure, ForceSuccess, InverterNode, ReactiveFallbackNode, ReactiveSequenceNode},
+    symbol::Symbol,
     BBMap, BehaviorNode, BlackboardValue, FallbackNode, SequenceNode,
 };
 pub use loader::load;
@@ -44,6 +44,7 @@ impl Default for Registry {
         );
         ret.register("ForceSuccess", boxify(|| ForceSuccess::default()));
         ret.register("ForceFailure", boxify(|| ForceFailure::default()));
+        ret.register("Inverter", boxify(|| InverterNode::default()));
         ret
     }
 }
