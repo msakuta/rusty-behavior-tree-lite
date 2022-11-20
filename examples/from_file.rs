@@ -88,8 +88,8 @@ fn main() -> anyhow::Result<()> {
     let mut ctx = Context::default();
     ctx.set("body", body);
 
-    let mut root =
-        load(&tree_source, &registry).map_err(|e| anyhow::format_err!("parse error: {e}"))?;
+    let mut root = load(&tree_source, &registry, false)
+        .map_err(|e| anyhow::format_err!("parse error: {e}"))?;
     let mut null = |_: &dyn std::any::Any| -> Option<Box<dyn std::any::Any>> { None };
     println!("root: {:?}", root.tick(&mut null, &mut ctx));
 

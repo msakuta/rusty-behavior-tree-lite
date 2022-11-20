@@ -49,6 +49,7 @@ pub enum LoadError {
     MissingTree,
     MissingNode(String),
     AddChildError(AddChildError, String),
+    PortUnmatch { node: String, port: String },
 }
 
 impl Display for LoadError {
@@ -62,6 +63,11 @@ impl Display for LoadError {
                 e.fmt(fmt)?;
                 write!(fmt, " to {}", node)
             }
+            Self::PortUnmatch { node, port } => write!(
+                fmt,
+                "Port {:?} was not provided by the node {:?}",
+                port, node
+            ),
         }
     }
 }

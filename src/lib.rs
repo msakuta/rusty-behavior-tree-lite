@@ -92,6 +92,10 @@ impl<'e, E> Context<'e, E> {
 pub type BehaviorCallback<'a> = &'a mut dyn FnMut(&dyn Any) -> Option<Box<dyn Any>>;
 
 pub trait BehaviorNode {
+    fn provided_ports(&self) -> Vec<Symbol> {
+        vec![]
+    }
+
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult;
 
     fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: BBMap) -> AddChildResult {
