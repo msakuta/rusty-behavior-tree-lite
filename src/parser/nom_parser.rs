@@ -242,6 +242,9 @@ pub fn parse_file(i: &str) -> IResult<&str, TreeSource> {
         },
     )))(i)?;
 
+    // Eat up trailing newlines to indicate that the input was thoroughly consumed
+    let (i, _) = multispace0(i)?;
+
     let (node_defs, tree_defs) = stmts.into_iter().fold((vec![], vec![]), |mut acc, cur| {
         match cur {
             NodeOrTree::Node(node) => acc.0.push(node),
