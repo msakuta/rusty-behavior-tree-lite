@@ -196,9 +196,39 @@ impl BehaviorNode for PrintBodyNode {
 }
 ```
 
+### Provided ports
+
+You can declare what ports you would use in a node by defining `provided_ports` method.
+This is optional, and only enforced if you specify `check_ports` argument in the `load` function explained later.
+However, declaring provided_ports will help statically checking the code and source file consistency, so is generally encouraged.
+
+```rust
+use ::behavior_tree_lite::{BehaviorNode, Symbol, Lazy};
+
+struct PrintBodyNode;
+
+impl BehaviorNode for PrintBodyNode {
+    fn provided_ports(&self) -> Vec<PortSpec> {
+        vec![PortSpec::new_in("body"), PortSpec::new_out("left_arm"), PortSpec::new_out("right_arm")]
+    }
+
+    fn tick(&mut self, _: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        // ...
+    }
+}
+```
+
 See [example code](examples/main.rs) for the full code.
 
 ### Loading the tree structure from a yaml file
+
+Deprecated in favor of <a href="#The custom config file format">the custom config file format</a>.
+It doesn't have much advantage over our custom format, except that it can be parsed by any yaml parser library (not limited to Rust).
+However, parsing is only a small part of the whole process of loading dynamically configured behavior tree.
+There are validation of port mapping and specifying input/output,
+which is not any easier with yaml.
+Our custom format has much more flexibility in load-time validation and
+error handling.
 
 You can define the tree structure in a yaml file and configure it on runtime.
 Yaml file is very good for writing human readable/writable configuration file.
@@ -230,7 +260,7 @@ registry.register("PrintBodyNode", Box::new(PrintBodyNodeConstructor));
 
 Some node types are registered by default, e.g. `SequenceNode` and `FallbackNode`.
 
-### Loading the tree structure from a custom config file
+## The custom config file format
 
 We have specific file format for describing behavior tree structure of our own.
 With this format, the same tree shown as YAML earlier can be written even more concisely like below.
@@ -245,16 +275,97 @@ tree main = Sequence {
 }
 ```
 
-It can be converted to an AST with `parse_file` function
+It can be converted to an AST with `parse_file` function.
+The AST (Abstract Syntax Tree) is a intermediate format of behavior tree,
+from which you can instantiate actual behavior trees as many times as you want.
+Note that the AST borrows lifetime of the argument string, so you cannot free the
+source string before the AST.
 
 ```rust
-let (_, tree_source) = behavior_tree_lite::parse_file(source_string)?;
+let (_, tree_source) = parse_file(source_string)?;
 ```
 
 and subsequently be instantiated to a tree.
+The second argument `registry` is the same as yaml parser.
+The third argument `check_ports` will switch port direction checking during loading.
+If your `BehaviorNode::provided_ports` and the source file's direction arrow (`<-`, `->` or `<->`) disagree, it will become an error.
 
 ```rust
-let tree = load(&tree_source)?;
+let tree = load(&tree_source, registry, check_ports)?;
+```
+
+### Node definition
+
+A node can be specified like below.
+It starts with a node name defined in Rust code.
+After that, it can take an optional list of input/output ports in parentheses.
+
+```
+PrintString (input <- "Hello, world!")
+```
+
+The direction of the arrow in the ports specify input, output or inout port types.
+The left hand side of the arrow is the port name defined in the node.
+The right hand side is the blackboard variable name or a literal.
+
+```
+a <- b      input port
+a -> b      output port
+a <-> b     inout port
+```
+
+You can specify a literal string, surrounded by double quotes, to an input port,
+but specifying a literal to output or inout node is an error.
+The type of the literal is always a string, so if you want a number,
+you may want to use `Context::get_parse()` method, which will automatically try
+to parse from a string, if the type was not desired one.
+
+```
+a <- "Hi!"
+a -> "Error!"
+a <-> "Error too!"
+```
+
+It is an error to try to read from an output port or write to an input port,
+but inout port can do both.
+
+
+### Child nodes
+
+A node can have a list of child nodes in braces.
+
+```
+Sequence {
+    PrintString (input <- "First")
+    PrintString (input <- "Second")
+}
+```
+
+Or even both ports and children.
+
+```
+Repeat (n <- "100") {
+    PrintString (input <- "Spam")
+}
+```
+
+
+### Syntax specification
+
+Here is a pseudo-EBNF notation of the syntax.
+
+Note that this specification is by no means accurate EBNF.
+The syntax is defined by recursive descent parser with parser combinator,
+which removes ambiguity, but this EBNF may have ambiguity.
+
+```
+tree = "tree" tree-name "=" node
+
+node = node-name [ "(" port-list ")" ] [ "{" node* "}" ]
+
+port-list = port [ "," port-list ]
+
+port = node-port-name ("<-" | "->" | "<->") blackboard-port-name
 ```
 
 ## TODO
