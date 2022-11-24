@@ -2,6 +2,7 @@ mod context;
 pub mod error;
 mod nodes;
 mod parser;
+mod registry;
 mod symbol;
 
 use std::any::Any;
@@ -9,10 +10,11 @@ use std::collections::HashMap;
 
 pub use crate::context::Context;
 pub use crate::nodes::{FallbackNode, SequenceNode};
-pub use crate::parser::{
-    boxify, load, load_yaml, node_def, parse_file, parse_nodes, Constructor, NodeDef, Registry,
-};
 pub use crate::symbol::Symbol;
+pub use crate::{
+    parser::{load, load_yaml, node_def, parse_file, parse_nodes, NodeDef},
+    registry::{boxify, Constructor, Registry},
+};
 pub use ::once_cell::sync::*;
 use error::{AddChildError, AddChildResult};
 
