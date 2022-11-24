@@ -43,6 +43,17 @@ impl<'e, E> Context<'e, E> {
         })
     }
 
+    /// Convenience method to get raw primitive types such as f64 or parse from string
+    pub fn get_parse<F>(&self, key: impl Into<Symbol> + Copy) -> Option<F>
+    where
+        F: FromStr + Copy + 'static,
+    {
+        self.get::<F>(key).copied().or_else(|| {
+            self.get::<String>(key)
+                .and_then(|val| val.parse::<F>().ok())
+        })
+    }
+
     pub fn set<T: 'static>(&mut self, key: impl Into<Symbol>, val: T) {
         let key = key.into();
         let mapped = self.blackboard_map.get(&key);
