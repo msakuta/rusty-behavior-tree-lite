@@ -8,6 +8,8 @@ use nom::{
     IResult,
 };
 
+use crate::PortType;
+
 #[derive(Debug, PartialEq)]
 pub struct NodeDef<'src> {
     name: &'src str,
@@ -116,7 +118,7 @@ pub enum BlackboardValue<'src> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct PortMap<'src> {
-    pub(crate) input: bool,
+    pub(crate) ty: PortType,
     pub(crate) node_port: &'src str,
     pub(crate) blackboard_value: BlackboardValue<'src>,
 }
@@ -189,14 +191,24 @@ fn port_maps(i: &str) -> IResult<&str, Vec<PortMap>> {
 fn port_map(i: &str) -> IResult<&str, PortMap> {
     let (i, node_port) = delimited(space0, identifier, space0)(i)?;
 
-    let (i, inout) = delimited(space0, alt((tag("<-"), tag("->"))), space0)(i)?;
+    let (i, inout) = delimited(space0, alt((tag("<->"), tag("<-"), tag("->"))), space0)(i)?;
 
     let (i, blackboard_name) = delimited(space0, alt((bb_ref, str_literal)), space0)(i)?;
 
     Ok((
         i,
         PortMap {
-            input: inout == "<-",
+            ty: match inout {
+                "<-" => PortType::Input,
+                "->" => PortType::Output,
+                "<->" => PortType::InOut,
+                _ => {
+                    return Err(nom::Err::Failure(nom::error::Error::new(
+                        i,
+                        nom::error::ErrorKind::Alt,
+                    )))
+                }
+            },
             node_port,
             blackboard_value: blackboard_name,
         },
@@ -362,7 +374,7 @@ mod test {
         assert_eq!(
             parse_tree(
                 "tree main = Sequence {
-                PrintBodyNode(in_socket <- in_val, out_socket -> out_val)
+                PrintBodyNode(in_socket <- in_val, out_socket -> out_val, inout_socket <-> inout_val)
     }"
             ),
             Ok((
@@ -376,14 +388,19 @@ mod test {
                             ty: "PrintBodyNode",
                             port_maps: vec![
                                 PortMap {
-                                    input: true,
+                                    ty: PortType::Input,
                                     node_port: "in_socket",
                                     blackboard_value: BlackboardValue::Ref("in_val"),
                                 },
                                 PortMap {
-                                    input: false,
+                                    ty: PortType::Output,
                                     node_port: "out_socket",
                                     blackboard_value: BlackboardValue::Ref("out_val"),
+                                },
+                                PortMap {
+                                    ty: PortType::InOut,
+                                    node_port: "inout_socket",
+                                    blackboard_value: BlackboardValue::Ref("inout_val"),
                                 }
                             ],
                             children: vec![]
@@ -413,14 +430,14 @@ mod test {
                             ty: "PrintBodyNode",
                             port_maps: vec![
                                 PortMap {
-                                    input: true,
+                                    ty: PortType::Input,
                                     node_port: "in_socket",
                                     blackboard_value: BlackboardValue::Literal(
                                         "in_val".to_string()
                                     ),
                                 },
                                 PortMap {
-                                    input: false,
+                                    ty: PortType::Output,
                                     node_port: "out_socket",
                                     blackboard_value: BlackboardValue::Ref("out_val"),
                                 }
@@ -468,12 +485,12 @@ mod test {
                                 ty: "PrintBodyNode",
                                 port_maps: vec![
                                     PortMap {
-                                        input: true,
+                                        ty: PortType::Input,
                                         node_port: "in_socket",
                                         blackboard_value: BlackboardValue::Ref("in_val"),
                                     },
                                     PortMap {
-                                        input: false,
+                                        ty: PortType::Output,
                                         node_port: "out_socket",
                                         blackboard_value: BlackboardValue::Ref("out_val"),
                                     }

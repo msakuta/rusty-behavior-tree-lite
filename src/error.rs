@@ -50,6 +50,7 @@ pub enum LoadError {
     MissingNode(String),
     AddChildError(AddChildError, String),
     PortUnmatch { node: String, port: String },
+    PortIOUnmatch { node: String, port: String },
 }
 
 impl Display for LoadError {
@@ -66,6 +67,11 @@ impl Display for LoadError {
             Self::PortUnmatch { node, port } => write!(
                 fmt,
                 "Port {:?} was not provided by the node {:?}",
+                port, node
+            ),
+            Self::PortIOUnmatch { node, port } => write!(
+                fmt,
+                "Port {:?} on node {:?} has wrong input/output indication",
                 port, node
             ),
         }

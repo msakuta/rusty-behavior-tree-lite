@@ -1,7 +1,7 @@
 use crate::{
     error::{AddChildError, AddChildResult},
     BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Context, Lazy,
-    Symbol,
+    PortSpec, Symbol,
 };
 
 pub struct SequenceNode {
@@ -277,8 +277,8 @@ pub(super) struct RepeatNode {
 }
 
 impl BehaviorNode for RepeatNode {
-    fn provided_ports(&self) -> Vec<Symbol> {
-        vec![*N]
+    fn provided_ports(&self) -> Vec<PortSpec> {
+        vec![PortSpec::new_in(*N)]
     }
 
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
@@ -323,8 +323,8 @@ pub(super) struct RetryNode {
 }
 
 impl BehaviorNode for RetryNode {
-    fn provided_ports(&self) -> Vec<Symbol> {
-        vec![*N]
+    fn provided_ports(&self) -> Vec<PortSpec> {
+        vec![PortSpec::new_in(*N)]
     }
 
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {

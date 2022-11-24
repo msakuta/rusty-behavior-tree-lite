@@ -42,11 +42,20 @@ fn load_recurse(
         let provided_ports = child_node.provided_ports();
         let mut bbmap = BBMap::new();
         for entry in child.port_maps.iter() {
-            if check_ports && !provided_ports.iter().any(|p| *p == entry.node_port) {
-                return Err(LoadError::PortUnmatch {
-                    node: child.ty.to_owned(),
-                    port: entry.node_port.to_owned(),
-                });
+            if check_ports {
+                if let Some(port) = provided_ports.iter().find(|p| p.key == entry.node_port) {
+                    if port.ty != entry.ty {
+                        return Err(LoadError::PortIOUnmatch {
+                            node: child.ty.to_owned(),
+                            port: entry.node_port.to_owned(),
+                        });
+                    }
+                } else {
+                    return Err(LoadError::PortUnmatch {
+                        node: child.ty.to_owned(),
+                        port: entry.node_port.to_owned(),
+                    });
+                }
             }
             bbmap.insert(
                 entry.node_port.into(),

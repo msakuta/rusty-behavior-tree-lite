@@ -2,6 +2,7 @@ mod context;
 pub mod error;
 mod nodes;
 mod parser;
+mod port;
 mod registry;
 mod symbol;
 
@@ -13,6 +14,7 @@ pub use crate::nodes::{FallbackNode, SequenceNode};
 pub use crate::symbol::Symbol;
 pub use crate::{
     parser::{load, load_yaml, node_def, parse_file, parse_nodes, NodeDef},
+    port::{PortSpec, PortType},
     registry::{boxify, Constructor, Registry},
 };
 pub use ::once_cell::sync::*;
@@ -37,7 +39,7 @@ pub type BBMap = HashMap<Symbol, BlackboardValue>;
 pub type BehaviorCallback<'a> = &'a mut dyn FnMut(&dyn Any) -> Option<Box<dyn Any>>;
 
 pub trait BehaviorNode {
-    fn provided_ports(&self) -> Vec<Symbol> {
+    fn provided_ports(&self) -> Vec<PortSpec> {
         vec![]
     }
 
