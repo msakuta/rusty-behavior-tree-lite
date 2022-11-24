@@ -1,6 +1,7 @@
 use crate::{
     error::{AddChildError, AddChildResult},
-    BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Context,
+    BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Context, Lazy,
+    Symbol,
 };
 
 pub struct SequenceNode {
@@ -264,6 +265,100 @@ impl BehaviorNode for InverterNode {
         } else {
             Err(AddChildError::TooManyNodes)
         }
+    }
+}
+
+const N: Lazy<Symbol> = Lazy::new(|| "n".into());
+
+#[derive(Default)]
+pub(super) struct RepeatNode {
+    n: Option<usize>,
+    child: Option<BehaviorNodeContainer>,
+}
+
+impl BehaviorNode for RepeatNode {
+    fn provided_ports(&self) -> Vec<Symbol> {
+        vec![*N]
+    }
+
+    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        if let Some((current, child)) = self
+            .n
+            .or_else(|| ctx.get_parse::<usize>("n"))
+            .zip(self.child.as_mut())
+        {
+            if current == 0 {
+                self.n = None;
+                return BehaviorResult::Success;
+            }
+            std::mem::swap(&mut ctx.blackboard_map, &mut child.blackboard_map);
+            let res = child.node.tick(arg, ctx);
+            std::mem::swap(&mut ctx.blackboard_map, &mut child.blackboard_map);
+            if let BehaviorResult::Success = res {
+                self.n = Some(current - 1);
+                return BehaviorResult::Running;
+            } else {
+                return res;
+            }
+        }
+        BehaviorResult::Fail
+    }
+
+    fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+        if self.child.is_some() {
+            return Err(AddChildError::TooManyNodes);
+        }
+        self.child = Some(BehaviorNodeContainer {
+            node: val,
+            blackboard_map,
+        });
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+pub(super) struct RetryNode {
+    n: Option<usize>,
+    child: Option<BehaviorNodeContainer>,
+}
+
+impl BehaviorNode for RetryNode {
+    fn provided_ports(&self) -> Vec<Symbol> {
+        vec![*N]
+    }
+
+    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        if let Some((current, child)) = self
+            .n
+            .or_else(|| ctx.get_parse::<usize>("n"))
+            .zip(self.child.as_mut())
+        {
+            if current == 0 {
+                self.n = None;
+                return BehaviorResult::Success;
+            }
+            std::mem::swap(&mut ctx.blackboard_map, &mut child.blackboard_map);
+            let res = child.node.tick(arg, ctx);
+            std::mem::swap(&mut ctx.blackboard_map, &mut child.blackboard_map);
+            if let BehaviorResult::Fail = res {
+                self.n = Some(current - 1);
+                return BehaviorResult::Running;
+            } else {
+                return res;
+            }
+        }
+        BehaviorResult::Fail
+    }
+
+    fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+        if self.child.is_some() {
+            return Err(AddChildError::TooManyNodes);
+        }
+        self.child = Some(BehaviorNodeContainer {
+            node: val,
+            blackboard_map,
+        });
+        Ok(())
     }
 }
 

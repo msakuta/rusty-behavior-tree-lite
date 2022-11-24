@@ -327,3 +327,83 @@ fn test_inverter() {
         invert_running.tick(&mut |_| None, &mut Context::default())
     );
 }
+
+#[test]
+fn test_repeat() {
+    let mut tree = RepeatNode::default();
+    tree.add_child(Box::new(Append::<true>), BBMap::new())
+        .unwrap();
+
+    let mut ctx = Context::default();
+    ctx.set::<usize>("n", 3);
+
+    let mut res = vec![];
+    while let BehaviorResult::Running = tree.tick(
+        &mut |v| {
+            res.push(*v.downcast_ref::<bool>().unwrap());
+            None
+        },
+        &mut ctx,
+    ) {}
+    assert_eq!(res, vec![true; 3]);
+}
+
+#[test]
+fn test_repeat_fail() {
+    let mut tree = RepeatNode::default();
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+        .unwrap();
+
+    let mut ctx = Context::default();
+    ctx.set::<usize>("n", 3);
+
+    let mut res = vec![];
+    while let BehaviorResult::Running = tree.tick(
+        &mut |v| {
+            res.push(*v.downcast_ref::<bool>().unwrap());
+            None
+        },
+        &mut ctx,
+    ) {}
+    assert_eq!(res, vec![true]);
+}
+
+#[test]
+fn test_retry() {
+    let mut tree = RetryNode::default();
+    tree.add_child(Box::new(Append::<true>), BBMap::new())
+        .unwrap();
+
+    let mut ctx = Context::default();
+    ctx.set::<usize>("n", 3);
+
+    let mut res = vec![];
+    while let BehaviorResult::Running = tree.tick(
+        &mut |v| {
+            res.push(*v.downcast_ref::<bool>().unwrap());
+            None
+        },
+        &mut ctx,
+    ) {}
+    assert_eq!(res, vec![true]);
+}
+
+#[test]
+fn test_retry_fail() {
+    let mut tree = RetryNode::default();
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+        .unwrap();
+
+    let mut ctx = Context::default();
+    ctx.set::<usize>("n", 3);
+
+    let mut res = vec![];
+    while let BehaviorResult::Running = tree.tick(
+        &mut |v| {
+            res.push(*v.downcast_ref::<bool>().unwrap());
+            None
+        },
+        &mut ctx,
+    ) {}
+    assert_eq!(res, vec![true; 3]);
+}

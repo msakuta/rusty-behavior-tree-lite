@@ -5,7 +5,7 @@ use crate::{
     error::LoadYamlError,
     nodes::{
         ForceFailureNode, ForceSuccessNode, InverterNode, ReactiveFallbackNode,
-        ReactiveSequenceNode,
+        ReactiveSequenceNode, RepeatNode, RetryNode,
     },
     symbol::Symbol,
     BBMap, BehaviorNode, BlackboardValue, FallbackNode, SequenceNode,
@@ -48,6 +48,8 @@ impl Default for Registry {
         ret.register("ForceSuccess", boxify(|| ForceSuccessNode::default()));
         ret.register("ForceFailure", boxify(|| ForceFailureNode::default()));
         ret.register("Inverter", boxify(|| InverterNode::default()));
+        ret.register("Repeat", boxify(|| RepeatNode::default()));
+        ret.register("Retry", boxify(|| RetryNode::default()));
         ret
     }
 }
