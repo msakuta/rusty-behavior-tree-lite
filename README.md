@@ -263,7 +263,7 @@ let tree = load(&tree_source)?;
 * [ ] Full set of control nodes
   * [x] Reactive nodes
   * [ ] Star nodes
-  * [ ] Decorator nodes
+  * [x] Decorator nodes
 * [x] Performance friendly blackboard keys
 * [x] DSL for defining behavior tree structure
 * [ ] Static type checking for behavior tree definition file
