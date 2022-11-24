@@ -61,7 +61,7 @@ fn load_recurse(
                 entry.node_port.into(),
                 match entry.blackboard_value {
                     super::nom_parser::BlackboardValue::Ref(ref value) => {
-                        crate::BlackboardValue::Ref(value.into())
+                        crate::BlackboardValue::Ref(value.into(), entry.ty)
                     }
                     super::nom_parser::BlackboardValue::Literal(ref value) => {
                         crate::BlackboardValue::Literal(value.clone())

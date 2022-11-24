@@ -195,20 +195,32 @@ fn port_map(i: &str) -> IResult<&str, PortMap> {
 
     let (i, blackboard_name) = delimited(space0, alt((bb_ref, str_literal)), space0)(i)?;
 
+    let ty = match inout {
+        "<-" => PortType::Input,
+        "->" => PortType::Output,
+        "<->" => PortType::InOut,
+        _ => {
+            return Err(nom::Err::Failure(nom::error::Error::new(
+                i,
+                nom::error::ErrorKind::Alt,
+            )))
+        }
+    };
+
+    // You cannot output to a literal! It is a parse error rather than runtime error.
+    if let BlackboardValue::Literal(_) = blackboard_name {
+        if !matches!(ty, PortType::Input) {
+            return Err(nom::Err::Failure(nom::error::Error::new(
+                i,
+                nom::error::ErrorKind::Verify,
+            )));
+        }
+    }
+
     Ok((
         i,
         PortMap {
-            ty: match inout {
-                "<-" => PortType::Input,
-                "->" => PortType::Output,
-                "<->" => PortType::InOut,
-                _ => {
-                    return Err(nom::Err::Failure(nom::error::Error::new(
-                        i,
-                        nom::error::ErrorKind::Alt,
-                    )))
-                }
-            },
+            ty,
             node_port,
             blackboard_value: blackboard_name,
         },

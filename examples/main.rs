@@ -2,6 +2,7 @@ use ::behavior_tree_lite::{
     hash_map, BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context, Lazy,
     SequenceNode, Symbol,
 };
+use behavior_tree_lite::PortType;
 
 #[derive(Clone, Debug)]
 struct Arm {
@@ -68,13 +69,13 @@ fn main() {
     print_arms
         .add_child(
             Box::new(PrintArmNode),
-            hash_map!("arm" => BlackboardValue::Ref("left_arm".into())),
+            hash_map!("arm" => BlackboardValue::Ref("left_arm".into(), PortType::InOut)),
         )
         .unwrap();
     print_arms
         .add_child(
             Box::new(PrintArmNode),
-            hash_map!("arm" => BlackboardValue::Ref("right_arm".into())),
+            hash_map!("arm" => BlackboardValue::Ref("right_arm".into(), PortType::InOut)),
         )
         .unwrap();
 

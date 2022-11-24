@@ -1,4 +1,4 @@
-use crate::{BBMap, Blackboard, BlackboardValue, Symbol};
+use crate::{BBMap, Blackboard, BlackboardValue, PortType, Symbol};
 use std::{any::Any, str::FromStr};
 
 #[derive(Default, Debug)]
@@ -6,6 +6,7 @@ pub struct Context<'e, T: 'e = ()> {
     blackboard: Blackboard,
     pub(crate) blackboard_map: BBMap,
     pub env: Option<&'e mut T>,
+    strict: bool,
 }
 
 impl<'e, T> Context<'e, T> {
@@ -14,11 +15,20 @@ impl<'e, T> Context<'e, T> {
             blackboard,
             blackboard_map: BBMap::new(),
             env: None,
+            strict: true,
         }
     }
 
     pub fn take_blackboard(self) -> Blackboard {
         self.blackboard
+    }
+
+    pub fn strict(&self) -> bool {
+        self.strict
+    }
+
+    pub fn set_strict(&mut self, b: bool) {
+        self.strict = b;
     }
 }
 
@@ -31,7 +41,16 @@ impl<'e, E> Context<'e, E> {
         let mapped = self.blackboard_map.get(&key);
         let mapped = match mapped {
             None => &key,
-            Some(BlackboardValue::Ref(mapped)) => mapped,
+            Some(BlackboardValue::Ref(mapped, ty)) => {
+                if matches!(*ty, PortType::Input | PortType::InOut) {
+                    mapped
+                } else {
+                    if self.strict {
+                        panic!("Port {:?} is not specified as input or inout port", key);
+                    }
+                    return None;
+                }
+            }
             Some(BlackboardValue::Literal(mapped)) => {
                 return (mapped as &dyn Any).downcast_ref();
             }
@@ -59,7 +78,16 @@ impl<'e, E> Context<'e, E> {
         let mapped = self.blackboard_map.get(&key);
         let mapped = match mapped {
             None => key,
-            Some(BlackboardValue::Ref(mapped)) => *mapped,
+            Some(BlackboardValue::Ref(mapped, ty)) => {
+                if matches!(ty, PortType::Output | PortType::InOut) {
+                    *mapped
+                } else {
+                    if self.strict {
+                        panic!("Port {:?} is not specified as output or inout port", key);
+                    }
+                    return;
+                }
+            }
             Some(BlackboardValue::Literal(_)) => panic!("Cannot write to a literal!"),
         };
         self.blackboard.insert(mapped, Box::new(val));

@@ -30,7 +30,7 @@ pub enum BehaviorResult {
 
 #[derive(Debug)]
 pub enum BlackboardValue {
-    Ref(Symbol),
+    Ref(Symbol, PortType),
     Literal(String),
 }
 

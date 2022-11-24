@@ -1,4 +1,4 @@
-use crate::{error::LoadYamlError, BBMap, BehaviorNode, BlackboardValue, Registry};
+use crate::{error::LoadYamlError, BBMap, BehaviorNode, BlackboardValue, PortType, Registry};
 use serde_yaml::Value;
 use std::collections::HashMap;
 
@@ -36,7 +36,7 @@ fn recurse_parse(
                 key.as_str().zip(value.as_str()).and_then(|(key, value)| {
                     Some((
                         *reg.key_names.get(key)?,
-                        BlackboardValue::Ref(*reg.key_names.get(value)?),
+                        BlackboardValue::Ref(*reg.key_names.get(value)?, PortType::InOut),
                     ))
                 })
             })
