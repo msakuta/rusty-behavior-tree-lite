@@ -1,6 +1,6 @@
 //! Our custom implementation of symbol.
 //!
-//! Copied and modified from https://github.com/remexre/symbol-rs
+//! Copied and modified from <https://github.com/remexre/symbol-rs>
 //! to conform to modern Rust and drop support for no-std
 
 use ::once_cell::sync::{Lazy, OnceCell};
