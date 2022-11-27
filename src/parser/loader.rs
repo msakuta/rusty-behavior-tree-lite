@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use super::nom_parser::{TreeDef, TreeSource};
-use crate::{error::LoadError, BBMap, BehaviorNode, Registry};
+use crate::{error::LoadError, nodes::SubtreeNode, BBMap, BehaviorNode, PortSpec, Registry};
 
 /// Instantiate a behavior tree from a AST of a tree.
 ///
@@ -34,7 +36,18 @@ fn load_recurse(
             .iter()
             .find(|tree| tree.name == parent.ty)
             .ok_or_else(|| LoadError::MissingNode(parent.ty.to_owned()))?;
-        load_recurse(&tree.root, registry, tree_source, check_ports)?
+        let loaded_subtree = load_recurse(&tree.root, registry, tree_source, check_ports)?;
+        Box::new(SubtreeNode::new(
+            loaded_subtree,
+            HashMap::new(),
+            tree.ports
+                .iter()
+                .map(|port| PortSpec {
+                    key: port.name.into(),
+                    ty: port.direction,
+                })
+                .collect(),
+        ))
     };
 
     for child in &parent.children {
@@ -121,5 +134,47 @@ mod test {
         );
         assert_eq!(result, BehaviorResult::Success);
         assert_eq!(values, vec![42]);
+    }
+
+    struct SendToArg;
+
+    impl BehaviorNode for SendToArg {
+        fn provided_ports(&self) -> Vec<PortSpec> {
+            vec![PortSpec::new_in("input")]
+        }
+
+        fn tick(&mut self, arg: crate::BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+            let input = ctx.get_parse::<i32>("input").unwrap();
+            arg(&input);
+            BehaviorResult::Success
+        }
+    }
+
+    #[test]
+    fn test_subtree_map() {
+        let tree = r#"
+tree main = Sequence {
+    sub(input <- "96")
+}
+
+tree sub(in input, out output) = Fallback {
+    SendToArg (input <- input)
+}
+"#;
+        let (_, tree_source) = crate::parse_file(tree).unwrap();
+        let mut registry = Registry::default();
+        registry.register("SendToArg", boxify(|| SendToArg));
+        let mut tree = load(&tree_source, &registry, true).unwrap();
+
+        let mut values = vec![];
+        let result = tree.tick(
+            &mut |val| {
+                val.downcast_ref::<i32>().map(|val| values.push(*val));
+                None
+            },
+            &mut Context::default(),
+        );
+        assert_eq!(result, BehaviorResult::Success);
+        assert_eq!(values, vec![96]);
     }
 }

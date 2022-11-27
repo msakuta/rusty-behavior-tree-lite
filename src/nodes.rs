@@ -1,8 +1,65 @@
 use crate::{
     error::{AddChildError, AddChildResult},
-    BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Context, Lazy,
-    PortSpec, Symbol,
+    BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Blackboard,
+    Context, Lazy, PortSpec, PortType, Symbol,
 };
+
+/// SubtreeNode is a container for a subtree, introducing a local namescope of blackboard variables.
+pub struct SubtreeNode {
+    child: BehaviorNodeContainer,
+    /// Blackboard variables needs to be a part of the node payload
+    blackboard: Blackboard,
+    params: Vec<PortSpec>,
+    // blackboard_map: BBMap,
+}
+
+impl SubtreeNode {
+    pub fn new(
+        child: Box<dyn BehaviorNode>,
+        blackboard: Blackboard,
+        params: Vec<PortSpec>,
+    ) -> Self {
+        Self {
+            child: BehaviorNodeContainer {
+                node: child,
+                blackboard_map: BBMap::new(),
+            },
+            blackboard,
+            params,
+            // blackboard_map: BBMap::new(),
+        }
+    }
+}
+
+impl BehaviorNode for SubtreeNode {
+    fn provided_ports(&self) -> Vec<PortSpec> {
+        self.params.clone()
+    }
+
+    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        for param in &self.params {
+            if let PortType::Input = param.ty {
+                if let Some(value) = ctx.get_any(param.key) {
+                    self.blackboard.insert(param.key, value.clone());
+                }
+            }
+        }
+        std::mem::swap(&mut ctx.blackboard, &mut self.blackboard);
+        std::mem::swap(&mut ctx.blackboard_map, &mut self.child.blackboard_map);
+        let res = self.child.node.tick(arg, ctx);
+        std::mem::swap(&mut ctx.blackboard_map, &mut self.child.blackboard_map);
+        std::mem::swap(&mut ctx.blackboard, &mut self.blackboard);
+        res
+    }
+
+    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+        self.child = BehaviorNodeContainer {
+            node,
+            blackboard_map,
+        };
+        Ok(())
+    }
+}
 
 pub struct SequenceNode {
     children: Vec<BehaviorNodeContainer>,

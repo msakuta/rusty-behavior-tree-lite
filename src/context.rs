@@ -1,9 +1,9 @@
 use crate::{BBMap, Blackboard, BlackboardValue, PortType, Symbol};
-use std::{any::Any, str::FromStr};
+use std::{any::Any, rc::Rc, str::FromStr};
 
 #[derive(Default, Debug)]
 pub struct Context<'e, T: 'e = ()> {
-    blackboard: Blackboard,
+    pub(crate) blackboard: Blackboard,
     pub(crate) blackboard_map: BBMap,
     pub env: Option<&'e mut T>,
     strict: bool,
@@ -33,6 +33,8 @@ impl<'e, T> Context<'e, T> {
 }
 
 impl<'e, E> Context<'e, E> {
+    /// Get a blackboard variable with downcasting to the type argument.
+    /// Returns `None` if it fails to downcast.
     pub fn get<'a, T: 'static>(&'a self, key: impl Into<Symbol>) -> Option<&'a T>
     where
         'e: 'a,
@@ -60,6 +62,30 @@ impl<'e, E> Context<'e, E> {
             // println!("val: {:?}", val);
             val.downcast_ref()
         })
+    }
+
+    /// Get a blackboard variable without downcasting.
+    pub fn get_any(&self, key: impl Into<Symbol>) -> Option<Rc<dyn Any>> {
+        let key: Symbol = key.into();
+        let mapped = self.blackboard_map.get(&key);
+        let mapped = match mapped {
+            None => &key,
+            Some(BlackboardValue::Ref(mapped, ty)) => {
+                if matches!(*ty, PortType::Input | PortType::InOut) {
+                    mapped
+                } else {
+                    if self.strict {
+                        panic!("Port {:?} is not specified as input or inout port", key);
+                    }
+                    return None;
+                }
+            }
+            Some(BlackboardValue::Literal(mapped)) => {
+                return Some(Rc::new(mapped.clone()));
+            }
+        };
+
+        self.blackboard.get(mapped).cloned()
     }
 
     /// Convenience method to get raw primitive types such as f64 or parse from string
@@ -90,7 +116,7 @@ impl<'e, E> Context<'e, E> {
             }
             Some(BlackboardValue::Literal(_)) => panic!("Cannot write to a literal!"),
         };
-        self.blackboard.insert(mapped, Box::new(val));
+        self.blackboard.insert(mapped, Rc::new(val));
     }
 
     // pub fn get_env(&mut self) -> Option<&mut E> {
