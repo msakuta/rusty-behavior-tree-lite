@@ -203,7 +203,7 @@ This is optional, and only enforced if you specify `check_ports` argument in the
 However, declaring provided_ports will help statically checking the code and source file consistency, so is generally encouraged.
 
 ```rust
-use ::behavior_tree_lite::{BehaviorNode, Symbol, Lazy};
+use ::behavior_tree_lite::{BehaviorNode, Symbol, Lazy, PortSpec};
 
 struct PrintBodyNode;
 
@@ -346,6 +346,21 @@ Or even both ports and children.
 ```
 Repeat (n <- "100") {
     PrintString (input <- "Spam")
+}
+```
+
+### Subtrees
+
+It is very easy to define subtrees and organize your huge tree into modular structure.
+
+```
+tree main = Sequence {
+    CanICallSubTree
+    SubTree
+}
+
+tree SubTree = Sequence {
+    PrintString (input <- "Hi there!")
 }
 ```
 
