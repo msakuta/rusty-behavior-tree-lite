@@ -1,7 +1,7 @@
 use super::{
     nodes::{
-        FallbackNode, ForceFailureNode, ForceSuccessNode, InverterNode, ReactiveFallbackNode,
-        ReactiveSequenceNode, RepeatNode, RetryNode, SequenceNode,
+        FallbackNode, ForceFailureNode, ForceSuccessNode, InverterNode, IsTrueNode,
+        ReactiveFallbackNode, ReactiveSequenceNode, RepeatNode, RetryNode, SequenceNode,
     },
     BehaviorNode, Symbol,
 };
@@ -42,6 +42,7 @@ impl Default for Registry {
         ret.register("Inverter", boxify(|| InverterNode::default()));
         ret.register("Repeat", boxify(|| RepeatNode::default()));
         ret.register("Retry", boxify(|| RetryNode::default()));
+        ret.register("IsTrue", boxify(|| IsTrueNode));
         ret
     }
 }

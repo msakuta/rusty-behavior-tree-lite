@@ -362,5 +362,27 @@ impl BehaviorNode for RetryNode {
     }
 }
 
+static INPUT: Lazy<Symbol> = Lazy::new(|| "input".into());
+
+pub struct IsTrueNode;
+
+impl BehaviorNode for IsTrueNode {
+    fn provided_ports(&self) -> Vec<PortSpec> {
+        vec![PortSpec::new_in(*INPUT)]
+    }
+
+    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        if let Some(input) = ctx.get_parse::<bool>(*INPUT) {
+            if input {
+                BehaviorResult::Success
+            } else {
+                BehaviorResult::Fail
+            }
+        } else {
+            BehaviorResult::Fail
+        }
+    }
+}
+
 #[cfg(test)]
 mod test;
