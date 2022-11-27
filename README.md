@@ -368,6 +368,30 @@ tree SubTree = Sequence {
 }
 ```
 
+A subtree has its own namespace of blackboard variables.
+It will keep the blackboard from being a huge table of global variables.
+
+If you need blackboard variables to communicate between the parent tree
+and the subtree, you can put parentheses and a comma-separated list
+after subtree name to specify the port definition of a subtree.
+
+A port "parameter" can be prefixed by either `in`, `out` or `inout`.
+It will indicate the direction of data flow.
+
+The syntax is intentionally made similar to a function definition, because
+it really is.
+
+```
+tree main = Sequence {
+    SubTree (input <- "42", output -> subtreeResult)
+    PrintString (input <- subtreeResult)
+}
+
+tree SubTree(in input, out output) = Sequence {
+    Calculate (input <- input, result -> output)
+}
+```
+
 
 ### Syntax specification
 
@@ -378,13 +402,23 @@ The syntax is defined by recursive descent parser with parser combinator,
 which removes ambiguity, but this EBNF may have ambiguity.
 
 ```
-tree = "tree" tree-name "=" node
+tree = "tree" tree-name [ "(" tree-port-list ")" ] "=" node
+
+tree-port-list = port-def | tree-port-list "," port-def
+
+port-def = ( "in" | "out" | "inout" ) tree-port-name
+
+tree-port-name = identifier
 
 node = node-name [ "(" port-list ")" ] [ "{" node* "}" ]
 
 port-list = port [ "," port-list ]
 
 port = node-port-name ("<-" | "->" | "<->") blackboard-port-name
+
+node-port-name = identifier
+
+blackboard-port-name = identifier
 ```
 
 ## TODO
