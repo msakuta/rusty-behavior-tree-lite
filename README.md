@@ -176,7 +176,9 @@ You can use `Lazy<Symbol>` to use cache-on-first-use pattern on the symbol like 
 `Lazy` is re-exported type from `once_cell`.
 
 ```rust
-use ::behavior_tree_lite::{BehaviorNode, Symbol, Lazy};
+use ::behavior_tree_lite::{
+    BehaviorNode, BehaviorResult, BehaviorCallback, Symbol, Lazy, Context
+};
 
 struct PrintBodyNode;
 
@@ -203,7 +205,9 @@ This is optional, and only enforced if you specify `check_ports` argument in the
 However, declaring provided_ports will help statically checking the code and source file consistency, so is generally encouraged.
 
 ```rust
-use ::behavior_tree_lite::{BehaviorNode, Symbol, Lazy, PortSpec};
+use ::behavior_tree_lite::{
+    BehaviorNode, BehaviorCallback, BehaviorResult, Context, Symbol, Lazy, PortSpec
+};
 
 struct PrintBodyNode;
 
@@ -254,8 +258,8 @@ to the registry.
 
 ```rust
 let mut registry = Registry::default();
-registry.register("PrintArmNode", Box::new(PrintArmNodeConstructor));
-registry.register("PrintBodyNode", Box::new(PrintBodyNodeConstructor));
+registry.register("PrintArmNode", boxify(|| PrintArmNode));
+registry.register("PrintBodyNode", boxify(|| PrintBodyNode));
 ```
 
 Some node types are registered by default, e.g. `SequenceNode` and `FallbackNode`.
@@ -291,7 +295,7 @@ The third argument `check_ports` will switch port direction checking during load
 If your `BehaviorNode::provided_ports` and the source file's direction arrow (`<-`, `->` or `<->`) disagree, it will become an error.
 
 ```rust
-let tree = load(&tree_source, registry, check_ports)?;
+let tree = load(&tree_source, &registry, check_ports)?;
 ```
 
 ### Node definition
