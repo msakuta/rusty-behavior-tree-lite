@@ -177,4 +177,48 @@ tree sub(in input, out output) = Fallback {
         assert_eq!(result, BehaviorResult::Success);
         assert_eq!(values, vec![96]);
     }
+
+    struct DoubleNode;
+
+    impl BehaviorNode for DoubleNode {
+        fn provided_ports(&self) -> Vec<PortSpec> {
+            vec![PortSpec::new_in("input"), PortSpec::new_out("output")]
+        }
+
+        fn tick(&mut self, _arg: crate::BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+            let input = ctx.get_parse::<i32>("input").unwrap();
+            ctx.set("output", input * 2);
+            BehaviorResult::Success
+        }
+    }
+
+    #[test]
+    fn test_subtree_output() {
+        let tree = r#"
+tree main = Sequence {
+    sub(input <- "42", output -> doubled)
+    SendToArg (input <- doubled)
+}
+
+tree sub(in input, out output) = Fallback {
+    Double (input <- input, output -> output)
+}
+"#;
+        let (_, tree_source) = crate::parse_file(tree).unwrap();
+        let mut registry = Registry::default();
+        registry.register("SendToArg", boxify(|| SendToArg));
+        registry.register("Double", boxify(|| DoubleNode));
+        let mut tree = load(&tree_source, &registry, true).unwrap();
+
+        let mut values = vec![];
+        let result = tree.tick(
+            &mut |val| {
+                val.downcast_ref::<i32>().map(|val| values.push(*val));
+                None
+            },
+            &mut Context::default(),
+        );
+        assert_eq!(result, BehaviorResult::Success);
+        assert_eq!(values, vec![84]);
+    }
 }

@@ -10,7 +10,6 @@ pub struct SubtreeNode {
     /// Blackboard variables needs to be a part of the node payload
     blackboard: Blackboard,
     params: Vec<PortSpec>,
-    // blackboard_map: BBMap,
 }
 
 impl SubtreeNode {
@@ -26,7 +25,6 @@ impl SubtreeNode {
             },
             blackboard,
             params,
-            // blackboard_map: BBMap::new(),
         }
     }
 }
@@ -37,11 +35,13 @@ impl BehaviorNode for SubtreeNode {
     }
 
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        for param in &self.params {
-            if let PortType::Input = param.ty {
-                if let Some(value) = ctx.get_any(param.key) {
-                    self.blackboard.insert(param.key, value.clone());
-                }
+        for param in self
+            .params
+            .iter()
+            .filter(|param| matches!(param.ty, PortType::Input | PortType::InOut))
+        {
+            if let Some(value) = ctx.get_any(param.key) {
+                self.blackboard.insert(param.key, value.clone());
             }
         }
         std::mem::swap(&mut ctx.blackboard, &mut self.blackboard);
@@ -49,6 +49,19 @@ impl BehaviorNode for SubtreeNode {
         let res = self.child.node.tick(arg, ctx);
         std::mem::swap(&mut ctx.blackboard_map, &mut self.child.blackboard_map);
         std::mem::swap(&mut ctx.blackboard, &mut self.blackboard);
+
+        // It is debatable if we should assign the output value back to the parent blackboard
+        // when the result was Fail or Running. We chose to assign them, which seems less counterintuitive.
+        for param in self
+            .params
+            .iter()
+            .filter(|param| matches!(param.ty, PortType::Output | PortType::InOut))
+        {
+            if let Some(value) = self.blackboard.get(&param.key) {
+                ctx.set_any(param.key, value.clone());
+            }
+        }
+
         res
     }
 

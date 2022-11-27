@@ -100,23 +100,34 @@ impl<'e, E> Context<'e, E> {
     }
 
     pub fn set<T: 'static>(&mut self, key: impl Into<Symbol>, val: T) {
+        if let Some(key) = self.map_out_key(key) {
+            self.blackboard.insert(key, Rc::new(val));
+        }
+    }
+
+    pub fn set_any(&mut self, key: impl Into<Symbol>, val: Rc<dyn Any>) {
+        if let Some(key) = self.map_out_key(key) {
+            self.blackboard.insert(key, val);
+        }
+    }
+
+    fn map_out_key(&self, key: impl Into<Symbol>) -> Option<Symbol> {
         let key = key.into();
         let mapped = self.blackboard_map.get(&key);
-        let mapped = match mapped {
-            None => key,
+        match mapped {
+            None => Some(key),
             Some(BlackboardValue::Ref(mapped, ty)) => {
                 if matches!(ty, PortType::Output | PortType::InOut) {
-                    *mapped
+                    Some(*mapped)
                 } else {
                     if self.strict {
                         panic!("Port {:?} is not specified as output or inout port", key);
                     }
-                    return;
+                    return None;
                 }
             }
             Some(BlackboardValue::Literal(_)) => panic!("Cannot write to a literal!"),
-        };
-        self.blackboard.insert(mapped, Rc::new(val));
+        }
     }
 
     // pub fn get_env(&mut self) -> Option<&mut E> {
