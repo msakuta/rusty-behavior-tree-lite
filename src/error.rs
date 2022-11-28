@@ -51,6 +51,7 @@ pub enum LoadError {
     AddChildError(AddChildError, String),
     PortUnmatch { node: String, port: String },
     PortIOUnmatch { node: String, port: String },
+    InfiniteRecursion { node: String },
 }
 
 impl Display for LoadError {
@@ -73,6 +74,10 @@ impl Display for LoadError {
                 fmt,
                 "Port {:?} on node {:?} has wrong input/output indication",
                 port, node
+            ),
+            Self::InfiniteRecursion { node } => write!(
+                fmt,
+                "Inifinite recusion detected; the same subtree {node:?} was used in itself"
             ),
         }
     }

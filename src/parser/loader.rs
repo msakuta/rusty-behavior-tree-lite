@@ -19,7 +19,59 @@ pub fn load(
         .find(|tree| tree.name == "main")
         .ok_or_else(|| LoadError::MissingTree)?;
 
-    load_recurse(&main.root, registry, tree_source, check_ports)
+    let top = TreeStack {
+        name: "main",
+        parent: None,
+    };
+
+    load_recurse(&main.root, registry, tree_source, check_ports, &top)
+}
+
+/// A mechanism to detect infinite recursion. It is a linked list in call stack.
+/// You can traverse the link back to enumerate all the subtree names (which is effectively function names)
+/// and check if a subtree name to be inserted is already there.
+///
+/// We could also use HashSet of subtree names, but it feels silly to use dynamically allocated collection
+/// when you can do the same thing with just the call stack.
+///
+/// # Discussion
+///
+/// It is very interesting discussion if we should allow recursive subtrees.
+/// It will give the source file the power to describe some advanced algorithms and make it
+/// easier to write Turing complete code.
+///
+/// However, in order to do so, we need to "lazily" load the subtree, which means we cannot instantiate
+/// the behavior nodes until the subtree is actually ticked. So we need to keep [`Registry`] and [`TreeSource`]
+/// objects during the lifetime of the entire behavior tree.
+/// It would completely change the design of `TreeSource` and I'm not exactly sure if it's worth it.
+/// After all, BehaviorTreeCPP works without recursive subtrees just fine.
+/// You can always transform algorithms with recursive calls into a flat loop with an explicit stack.
+///
+/// Also, it is not entirely clear how we should render the behavior tree on a graphical editor, when
+/// we get to implement one.
+/// Clearly, we cannot expand all the subtrees that contains itself, but the user would want to expand
+/// all subtrees to get better understanding of the tree structure.
+/// It means the graphical editor also needs some kind of lazy evaluation.
+///
+/// For now, we make recursive subtrees an error. Luckily we can detect it relatively easily.
+///
+/// By the way, if we didn't have this mechanism in place, recursive subtrees cause a stack overflow.
+/// It uses quite some amount of heap memory, but call stack runs short sooner.
+struct TreeStack<'a, 'src> {
+    name: &'src str,
+    parent: Option<&'a TreeStack<'a, 'src>>,
+}
+
+impl<'a, 'src> TreeStack<'a, 'src> {
+    fn find(&self, name: &str) -> bool {
+        if self.name == name {
+            true
+        } else if let Some(parent) = self.parent {
+            parent.find(name)
+        } else {
+            false
+        }
+    }
 }
 
 fn load_recurse(
@@ -27,6 +79,7 @@ fn load_recurse(
     registry: &Registry,
     tree_source: &TreeSource,
     check_ports: bool,
+    parent_stack: &TreeStack,
 ) -> Result<Box<dyn BehaviorNode>, LoadError> {
     let mut ret = if let Some(ret) = registry.build(parent.ty) {
         ret
@@ -36,7 +89,19 @@ fn load_recurse(
             .iter()
             .find(|tree| tree.name == parent.ty)
             .ok_or_else(|| LoadError::MissingNode(parent.ty.to_owned()))?;
-        let loaded_subtree = load_recurse(&tree.root, registry, tree_source, check_ports)?;
+
+        // Prevent infinite recursion
+        if parent_stack.find(parent.ty) {
+            return Err(LoadError::InfiniteRecursion {
+                node: parent.ty.to_owned(),
+            });
+        }
+        let tree_stack = TreeStack {
+            name: parent.ty,
+            parent: Some(parent_stack),
+        };
+        let loaded_subtree =
+            load_recurse(&tree.root, registry, tree_source, check_ports, &tree_stack)?;
         Box::new(SubtreeNode::new(
             loaded_subtree,
             HashMap::new(),
@@ -51,7 +116,7 @@ fn load_recurse(
     };
 
     for child in &parent.children {
-        let child_node = load_recurse(child, registry, tree_source, check_ports)?;
+        let child_node = load_recurse(child, registry, tree_source, check_ports, parent_stack)?;
         let provided_ports = child_node.provided_ports();
         let mut bbmap = BBMap::new();
         for entry in child.port_maps.iter() {
@@ -92,7 +157,7 @@ fn load_recurse(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{boxify, BehaviorResult, Context};
+    use crate::{boxify, error::LoadError, BehaviorResult, Context};
 
     struct PrintNode;
 
@@ -220,5 +285,26 @@ tree sub(in input, out output) = Fallback {
         );
         assert_eq!(result, BehaviorResult::Success);
         assert_eq!(values, vec![84]);
+    }
+
+    #[test]
+    fn recurse() {
+        let (_, st) = crate::parse_file(
+            "
+tree main = Sequence {
+    Sub
+}
+
+tree Sub = Sequence {
+    Sub
+}
+        ",
+        )
+        .unwrap();
+
+        assert!(matches!(
+            load(&st, &Registry::default(), false),
+            Err(LoadError::InfiniteRecursion { .. })
+        ));
     }
 }
