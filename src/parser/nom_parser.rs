@@ -104,6 +104,32 @@ pub struct TreeDef<'src> {
     pub(crate) children: Vec<TreeDef<'src>>,
 }
 
+impl<'src> TreeDef<'src> {
+    fn new(ty: &'src str) -> Self {
+        Self {
+            ty,
+            port_maps: vec![],
+            children: vec![],
+        }
+    }
+
+    fn new_with_child(ty: &'src str, child: TreeDef<'src>) -> Self {
+        Self {
+            ty,
+            port_maps: vec![],
+            children: vec![child],
+        }
+    }
+
+    fn new_with_children(ty: &'src str, children: Vec<TreeDef<'src>>) -> Self {
+        Self {
+            ty,
+            port_maps: vec![],
+            children,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum BlackboardValue<'src> {
     /// Litral value could have decoded, so it is an owned string.
@@ -160,7 +186,7 @@ fn tree_children(i: &str) -> IResult<&str, Vec<TreeDef>> {
 
     let (i, v) = many0(delimited(
         space0,
-        parse_tree_node,
+        alt((parse_condition_node, parse_tree_node)),
         many0(pair(space0, newlines)),
     ))(i)?;
 
@@ -191,6 +217,30 @@ fn parse_tree_node(i: &str) -> IResult<&str, TreeDef> {
             port_maps: input_ports.unwrap_or(vec![]),
             children: children.unwrap_or(vec![]),
         },
+    ))
+}
+
+fn parse_condition_node(i: &str) -> IResult<&str, TreeDef> {
+    let (i, _ty) = delimited(space0, tag("if"), space0)(i)?;
+
+    let (i, subnode) = delimited(
+        delimited(space0, char('('), space0),
+        parse_tree_node,
+        delimited(space0, char(')'), space0),
+    )(i)?;
+
+    let (i, children) = delimited(
+        delimited(space0, char('{'), space0),
+        tree_children,
+        delimited(space0, char('}'), space0),
+    )(i)?;
+
+    Ok((
+        i,
+        TreeDef::new_with_children(
+            "if",
+            vec![subnode, TreeDef::new_with_children("Sequence", children)],
+        ),
     ))
 }
 
@@ -307,318 +357,4 @@ pub struct TreeSource<'src> {
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-
-    impl<'src> TreeDef<'src> {
-        fn new(ty: &'src str) -> Self {
-            Self {
-                ty,
-                port_maps: vec![],
-                children: vec![],
-            }
-        }
-
-        fn new_with_child(ty: &'src str, child: TreeDef<'src>) -> Self {
-            Self {
-                ty,
-                port_maps: vec![],
-                children: vec![child],
-            }
-        }
-    }
-
-    impl<'src> TreeRootDef<'src> {
-        fn new(name: &'src str, root: TreeDef<'src>) -> Self {
-            Self {
-                name,
-                root,
-                ports: vec![],
-            }
-        }
-    }
-
-    #[test]
-    fn test_nodes() {
-        assert_eq!(
-            parse_nodes(
-                "node A {
-        }"
-            ),
-            Ok((
-                "",
-                vec![NodeDef {
-                    name: "A",
-                    ports: vec![],
-                }]
-            ))
-        );
-
-        assert_eq!(
-            parse_nodes(
-                "node A {
-            in A: Arm
-            out B: Body
-        }"
-            ),
-            Ok((
-                "",
-                vec![NodeDef {
-                    name: "A",
-                    ports: vec![
-                        PortDef {
-                            direction: PortType::Input,
-                            name: "A",
-                            ty: Some("Arm"),
-                        },
-                        PortDef {
-                            direction: PortType::Output,
-                            name: "B",
-                            ty: Some("Body"),
-                        }
-                    ],
-                }]
-            ))
-        );
-    }
-
-    #[test]
-    fn test_trees() {
-        assert_eq!(
-            parse_tree(
-                "tree main = Sequence {
-        }"
-            ),
-            Ok(("", TreeRootDef::new("main", TreeDef::new("Sequence"))))
-        );
-
-        assert_eq!(
-            parse_tree(
-                "tree main = Sequence {
-                    PrintBodyNode
-        }"
-            ),
-            Ok((
-                "",
-                TreeRootDef::new(
-                    "main",
-                    TreeDef::new_with_child("Sequence", TreeDef::new("PrintBodyNode"))
-                )
-            ))
-        );
-    }
-
-    #[test]
-    fn test_tree_ports() {
-        assert_eq!(
-            parse_tree(
-                "tree main = Sequence {
-                PrintBodyNode(in_socket <- in_val, out_socket -> out_val, inout_socket <-> inout_val)
-    }"
-            ),
-            Ok((
-                "",
-                TreeRootDef::new("main",
-                    TreeDef {
-                        ty: "Sequence",
-                        port_maps: vec![],
-                        children: vec![TreeDef {
-                            ty: "PrintBodyNode",
-                            port_maps: vec![
-                                PortMap {
-                                    ty: PortType::Input,
-                                    node_port: "in_socket",
-                                    blackboard_value: BlackboardValue::Ref("in_val"),
-                                },
-                                PortMap {
-                                    ty: PortType::Output,
-                                    node_port: "out_socket",
-                                    blackboard_value: BlackboardValue::Ref("out_val"),
-                                },
-                                PortMap {
-                                    ty: PortType::InOut,
-                                    node_port: "inout_socket",
-                                    blackboard_value: BlackboardValue::Ref("inout_val"),
-                                }
-                            ],
-                            children: vec![]
-                        }]
-                    }
-                )
-            ))
-        );
-    }
-
-    #[test]
-    fn test_port_literal() {
-        assert_eq!(
-            parse_tree(
-                r#"tree main = Sequence {
-                PrintBodyNode(in_socket <- "in_val", out_socket -> out_val)
-    }"#
-            ),
-            Ok((
-                "",
-                TreeRootDef::new(
-                    "main",
-                    TreeDef {
-                        ty: "Sequence",
-                        port_maps: vec![],
-                        children: vec![TreeDef {
-                            ty: "PrintBodyNode",
-                            port_maps: vec![
-                                PortMap {
-                                    ty: PortType::Input,
-                                    node_port: "in_socket",
-                                    blackboard_value: BlackboardValue::Literal(
-                                        "in_val".to_string()
-                                    ),
-                                },
-                                PortMap {
-                                    ty: PortType::Output,
-                                    node_port: "out_socket",
-                                    blackboard_value: BlackboardValue::Ref("out_val"),
-                                }
-                            ],
-                            children: vec![]
-                        }]
-                    }
-                )
-            ))
-        );
-    }
-
-    #[test]
-    fn test_file() {
-        assert_eq!(
-            parse_file(
-                "node A {
-            in A: Arm
-            out B: Body
-        }
-        tree main = Sequence {
-            PrintBodyNode(in_socket <- in_val, out_socket -> out_val)
-        }"
-            ),
-            Ok((
-                "",
-                TreeSource {
-                    node_defs: vec![NodeDef {
-                        name: "A",
-                        ports: vec![
-                            PortDef {
-                                direction: PortType::Input,
-                                name: "A",
-                                ty: Some("Arm"),
-                            },
-                            PortDef {
-                                direction: PortType::Output,
-                                name: "B",
-                                ty: Some("Body"),
-                            }
-                        ],
-                    }],
-                    tree_defs: vec![TreeRootDef::new(
-                        "main",
-                        TreeDef {
-                            ty: "Sequence",
-                            port_maps: vec![],
-                            children: vec![TreeDef {
-                                ty: "PrintBodyNode",
-                                port_maps: vec![
-                                    PortMap {
-                                        ty: PortType::Input,
-                                        node_port: "in_socket",
-                                        blackboard_value: BlackboardValue::Ref("in_val"),
-                                    },
-                                    PortMap {
-                                        ty: PortType::Output,
-                                        node_port: "out_socket",
-                                        blackboard_value: BlackboardValue::Ref("out_val"),
-                                    }
-                                ],
-                                children: vec![],
-                            }]
-                        }
-                    )],
-                }
-            ))
-        );
-    }
-
-    #[test]
-    fn test_subtree() {
-        assert_eq!(
-            parse_file(
-                "
-tree main = Sequence {
-    sub(port <- input)
-}
-
-tree sub(in port, out result) = Sequence {
-    PrintBodyNode(in_socket <- in_val, out_socket -> out_val)
-}
-"
-            ),
-            Ok((
-                "",
-                TreeSource {
-                    node_defs: vec![],
-                    tree_defs: vec![
-                        TreeRootDef::new(
-                            "main",
-                            TreeDef {
-                                ty: "Sequence",
-                                port_maps: vec![],
-                                children: vec![TreeDef {
-                                    ty: "sub",
-                                    port_maps: vec![PortMap {
-                                        ty: PortType::Input,
-                                        node_port: "port",
-                                        blackboard_value: BlackboardValue::Ref("input"),
-                                    }],
-                                    children: vec![],
-                                }]
-                            }
-                        ),
-                        TreeRootDef {
-                            name: "sub",
-                            ports: vec![
-                                PortDef {
-                                    direction: PortType::Input,
-                                    name: "port",
-                                    ty: None,
-                                },
-                                PortDef {
-                                    direction: PortType::Output,
-                                    name: "result",
-                                    ty: None,
-                                }
-                            ],
-                            root: TreeDef {
-                                ty: "Sequence",
-                                port_maps: vec![],
-                                children: vec![TreeDef {
-                                    ty: "PrintBodyNode",
-                                    port_maps: vec![
-                                        PortMap {
-                                            ty: PortType::Input,
-                                            node_port: "in_socket",
-                                            blackboard_value: BlackboardValue::Ref("in_val"),
-                                        },
-                                        PortMap {
-                                            ty: PortType::Output,
-                                            node_port: "out_socket",
-                                            blackboard_value: BlackboardValue::Ref("out_val"),
-                                        }
-                                    ],
-                                    children: vec![],
-                                }]
-                            }
-                        }
-                    ],
-                }
-            ))
-        );
-    }
-}
+mod test;
