@@ -432,7 +432,28 @@ impl BehaviorNode for RetryNode {
     }
 }
 
-static INPUT: Lazy<Symbol> = Lazy::new(|| "input".into());
+pub(crate) static VALUE: Lazy<Symbol> = Lazy::new(|| "value".into());
+pub(crate) static OUTPUT: Lazy<Symbol> = Lazy::new(|| "output".into());
+
+pub(crate) struct SetBoolNode;
+
+impl BehaviorNode for SetBoolNode {
+    fn provided_ports(&self) -> Vec<PortSpec> {
+        vec![PortSpec::new_in(*VALUE), PortSpec::new_out(*OUTPUT)]
+    }
+
+    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        let result = ctx.get_parse::<bool>(*VALUE);
+        if let Some(value) = result {
+            ctx.set(*OUTPUT, value);
+            BehaviorResult::Success
+        } else {
+            BehaviorResult::Fail
+        }
+    }
+}
+
+pub(crate) static INPUT: Lazy<Symbol> = Lazy::new(|| "input".into());
 
 pub struct IsTrueNode;
 

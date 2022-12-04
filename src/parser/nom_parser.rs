@@ -114,6 +114,13 @@ pub struct TreeDef<'src> {
     pub(crate) ty: &'src str,
     pub(crate) port_maps: Vec<PortMap<'src>>,
     pub(crate) children: Vec<TreeDef<'src>>,
+    pub(crate) vars: Vec<VarDef<'src>>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct VarDef<'src> {
+    pub(crate) name: &'src str,
+    pub(crate) init: Option<&'src str>,
 }
 
 impl<'src> TreeDef<'src> {
@@ -123,6 +130,7 @@ impl<'src> TreeDef<'src> {
             ty,
             port_maps: vec![],
             children: vec![],
+            vars: vec![],
         }
     }
 
@@ -132,6 +140,7 @@ impl<'src> TreeDef<'src> {
             ty,
             port_maps: vec![],
             children: vec![child],
+            vars: vec![],
         }
     }
 
@@ -140,6 +149,70 @@ impl<'src> TreeDef<'src> {
             ty,
             port_maps: vec![],
             children,
+            vars: vec![],
+        }
+    }
+
+    #[allow(dead_code)]
+    fn new_with_children_and_vars(
+        ty: &'src str,
+        children: Vec<TreeDef<'src>>,
+        vars: Vec<VarDef<'src>>,
+    ) -> Self {
+        Self {
+            ty,
+            port_maps: vec![],
+            children,
+            vars,
+        }
+    }
+
+    fn new_with_tree_elems(ty: &'src str, children: Vec<TreeElem<'src>>) -> Self {
+        Self::new_with_ports_and_tree_elems(ty, vec![], children)
+    }
+
+    #[allow(dead_code)]
+    fn new_with_ports(ty: &'src str, port_maps: Vec<PortMap<'src>>) -> Self {
+        Self::new_with_ports_and_tree_elems(ty, port_maps, vec![])
+    }
+
+    fn new_with_ports_and_tree_elems(
+        ty: &'src str,
+        port_maps: Vec<PortMap<'src>>,
+        children: Vec<TreeElem<'src>>,
+    ) -> Self {
+        let (children, vars) = children.into_iter().fold((vec![], vec![]), |mut acc, cur| {
+            match cur {
+                TreeElem::Node(node) => acc.0.push(node),
+                TreeElem::Var(var) => {
+                    if let Some(init) = var.init {
+                        acc.0.push(TreeDef::new_with_ports(
+                            "SetBool",
+                            vec![
+                                PortMap {
+                                    node_port: "value",
+                                    blackboard_value: BlackboardValue::Literal(init.to_owned()),
+                                    ty: PortType::Input,
+                                },
+                                PortMap {
+                                    node_port: "output",
+                                    blackboard_value: BlackboardValue::Ref(var.name),
+                                    ty: PortType::Output,
+                                },
+                            ],
+                        ));
+                    }
+                    acc.1.push(var);
+                }
+            }
+            acc
+        });
+
+        Self {
+            ty,
+            port_maps,
+            children,
+            vars,
         }
     }
 }
@@ -195,12 +268,18 @@ fn parse_tree(i: &str) -> IResult<&str, TreeRootDef> {
     ))
 }
 
-fn tree_children(i: &str) -> IResult<&str, Vec<TreeDef>> {
+#[derive(Debug)]
+enum TreeElem<'src> {
+    Node(TreeDef<'src>),
+    Var(VarDef<'src>),
+}
+
+fn tree_children(i: &str) -> IResult<&str, Vec<TreeElem>> {
     let (i, _) = many0(newlines)(i)?;
 
     let (i, v) = many0(delimited(
         space0,
-        alt((parse_condition_node, parse_tree_node)),
+        alt((var_decl, parse_condition_node, parse_tree_elem)),
         many0(newlines),
     ))(i)?;
 
@@ -218,12 +297,17 @@ fn parse_tree_node(i: &str) -> IResult<&str, TreeDef> {
 
     Ok((
         i,
-        TreeDef {
+        TreeDef::new_with_ports_and_tree_elems(
             ty,
-            port_maps: input_ports.unwrap_or(vec![]),
-            children: children.unwrap_or(vec![]),
-        },
+            input_ports.unwrap_or(vec![]),
+            children.unwrap_or(vec![]),
+        ),
     ))
+}
+
+fn parse_tree_elem(i: &str) -> IResult<&str, TreeElem> {
+    let (i, elem) = parse_tree_node(i)?;
+    Ok((i, TreeElem::Node(elem)))
 }
 
 fn parse_conditional_expr(i: &str) -> IResult<&str, TreeDef> {
@@ -238,12 +322,12 @@ fn parse_conditional_expr(i: &str) -> IResult<&str, TreeDef> {
     }
 }
 
-fn parse_condition_node(i: &str) -> IResult<&str, TreeDef> {
+fn parse_condition_node(i: &str) -> IResult<&str, TreeElem> {
     let (i, _ty) = delimited(space0, tag("if"), space0)(i)?;
 
-    let (i, subnode) = delimited(open_paren, parse_conditional_expr, close_paren)(i)?;
+    let (i, condition) = delimited(open_paren, parse_conditional_expr, close_paren)(i)?;
 
-    let (i, children) = delimited(open_brace, tree_children, close_brace)(i)?;
+    let (i, then_children) = delimited(open_brace, tree_children, close_brace)(i)?;
 
     let (i, else_children) = opt(delimited(
         pair(delimited(space0, tag("else"), space0), open_brace),
@@ -251,13 +335,33 @@ fn parse_condition_node(i: &str) -> IResult<&str, TreeDef> {
         close_brace,
     ))(i)?;
 
-    let mut children = vec![subnode, TreeDef::new_with_children("Sequence", children)];
+    let mut children = vec![
+        condition,
+        TreeDef::new_with_tree_elems("Sequence", then_children),
+    ];
 
     if let Some(else_children) = else_children {
-        children.push(TreeDef::new_with_children("Sequence", else_children));
+        children.push(TreeDef::new_with_tree_elems("Sequence", else_children));
     }
 
-    Ok((i, TreeDef::new_with_children("if", children)))
+    Ok((
+        i,
+        TreeElem::Node(TreeDef::new_with_children("if", children)),
+    ))
+}
+
+fn var_decl(i: &str) -> IResult<&str, TreeElem> {
+    let (i, _var) = delimited(space0, tag("var"), space0)(i)?;
+
+    let (i, name) = delimited(space0, identifier, space0)(i)?;
+
+    let (i, init) = opt(delimited(
+        delimited(space0, char('='), space0),
+        alt((tag("true"), tag("false"))),
+        space0,
+    ))(i)?;
+
+    Ok((i, TreeElem::Var(VarDef { name, init })))
 }
 
 fn port_maps(i: &str) -> IResult<&str, Vec<PortMap>> {

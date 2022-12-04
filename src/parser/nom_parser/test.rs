@@ -91,12 +91,11 @@ fn test_tree_ports() {
             Ok((
                 "",
                 TreeRootDef::new("main",
-                    TreeDef {
-                        ty: "Sequence",
-                        port_maps: vec![],
-                        children: vec![TreeDef {
-                            ty: "PrintBodyNode",
-                            port_maps: vec![
+                    TreeDef::new_with_child(
+                        "Sequence",
+                        TreeDef::new_with_ports(
+                            "PrintBodyNode",
+                            vec![
                                 PortMap {
                                     ty: PortType::Input,
                                     node_port: "in_socket",
@@ -112,10 +111,9 @@ fn test_tree_ports() {
                                     node_port: "inout_socket",
                                     blackboard_value: BlackboardValue::Ref("inout_val"),
                                 }
-                            ],
-                            children: vec![]
-                        }]
-                    }
+                            ]
+                        )
+                    )
                 )
             ))
         );
@@ -133,12 +131,11 @@ fn test_port_literal() {
             "",
             TreeRootDef::new(
                 "main",
-                TreeDef {
-                    ty: "Sequence",
-                    port_maps: vec![],
-                    children: vec![TreeDef {
-                        ty: "PrintBodyNode",
-                        port_maps: vec![
+                TreeDef::new_with_child(
+                    "Sequence",
+                    TreeDef::new_with_ports(
+                        "PrintBodyNode",
+                        vec![
                             PortMap {
                                 ty: PortType::Input,
                                 node_port: "in_socket",
@@ -149,10 +146,9 @@ fn test_port_literal() {
                                 node_port: "out_socket",
                                 blackboard_value: BlackboardValue::Ref("out_val"),
                             }
-                        ],
-                        children: vec![]
-                    }]
-                }
+                        ]
+                    )
+                )
             )
         ))
     );
@@ -190,12 +186,11 @@ fn test_file() {
                 }],
                 tree_defs: vec![TreeRootDef::new(
                     "main",
-                    TreeDef {
-                        ty: "Sequence",
-                        port_maps: vec![],
-                        children: vec![TreeDef {
-                            ty: "PrintBodyNode",
-                            port_maps: vec![
+                    TreeDef::new_with_child(
+                        "Sequence",
+                        TreeDef::new_with_ports(
+                            "PrintBodyNode",
+                            vec![
                                 PortMap {
                                     ty: PortType::Input,
                                     node_port: "in_socket",
@@ -206,10 +201,9 @@ fn test_file() {
                                     node_port: "out_socket",
                                     blackboard_value: BlackboardValue::Ref("out_val"),
                                 }
-                            ],
-                            children: vec![],
-                        }]
-                    }
+                            ]
+                        )
+                    )
                 )],
             }
         ))
@@ -237,19 +231,17 @@ tree sub(in port, out result) = Sequence {
                 tree_defs: vec![
                     TreeRootDef::new(
                         "main",
-                        TreeDef {
-                            ty: "Sequence",
-                            port_maps: vec![],
-                            children: vec![TreeDef {
-                                ty: "sub",
-                                port_maps: vec![PortMap {
+                        TreeDef::new_with_child(
+                            "Sequence",
+                            TreeDef::new_with_ports(
+                                "sub",
+                                vec![PortMap {
                                     ty: PortType::Input,
                                     node_port: "port",
                                     blackboard_value: BlackboardValue::Ref("input"),
-                                }],
-                                children: vec![],
-                            }]
-                        }
+                                }]
+                            )
+                        )
                     ),
                     TreeRootDef {
                         name: "sub",
@@ -265,12 +257,11 @@ tree sub(in port, out result) = Sequence {
                                 ty: None,
                             }
                         ],
-                        root: TreeDef {
-                            ty: "Sequence",
-                            port_maps: vec![],
-                            children: vec![TreeDef {
-                                ty: "PrintBodyNode",
-                                port_maps: vec![
+                        root: TreeDef::new_with_child(
+                            "Sequence",
+                            TreeDef::new_with_ports(
+                                "PrintBodyNode",
+                                vec![
                                     PortMap {
                                         ty: PortType::Input,
                                         node_port: "in_socket",
@@ -281,10 +272,9 @@ tree sub(in port, out result) = Sequence {
                                         node_port: "out_socket",
                                         blackboard_value: BlackboardValue::Ref("out_val"),
                                     }
-                                ],
-                                children: vec![],
-                            }]
-                        }
+                                ]
+                            )
+                        )
                     }
                 ],
             }
@@ -349,15 +339,14 @@ tree main = Sequence {
                         TreeDef::new_with_children(
                             "if",
                             vec![
-                                TreeDef {
-                                    ty: "ConditionNode",
-                                    port_maps: vec![PortMap {
+                                TreeDef::new_with_ports(
+                                    "ConditionNode",
+                                    vec![PortMap {
                                         ty: PortType::Input,
                                         node_port: "input",
                                         blackboard_value: BlackboardValue::Ref("here"),
-                                    }],
-                                    children: vec![],
-                                },
+                                    }]
+                                ),
                                 TreeDef::new_with_child("Sequence", TreeDef::new("Yes")),
                             ],
                         )
@@ -508,6 +497,50 @@ tree main = Sequence {
                                 TreeDef::new_with_child("Sequence", TreeDef::new("Yes")),
                             ],
                         )
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_var() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = true
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![TreeDef::new_with_ports(
+                            "SetBool",
+                            vec![
+                                PortMap {
+                                    node_port: "value",
+                                    blackboard_value: BlackboardValue::Literal("true".to_owned()),
+                                    ty: PortType::Input,
+                                },
+                                PortMap {
+                                    node_port: "output",
+                                    blackboard_value: BlackboardValue::Ref("a"),
+                                    ty: PortType::Output,
+                                }
+                            ]
+                        )],
+                        vec![VarDef {
+                            name: "a",
+                            init: Some("true"),
+                        }],
                     )
                 )]
             }
