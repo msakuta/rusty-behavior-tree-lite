@@ -393,6 +393,94 @@ tree SubTree(in input, out output) = Sequence {
 ```
 
 
+### Conditional syntax
+
+Like a programming language, the format supports conditional syntax.
+
+```
+tree main = Sequence {
+    if (ConditionNode) {
+        Yes
+    }
+}
+```
+
+If the `ConditionNode` returns `Success`, the inner braces are ticked
+as a Sequence, otherwise it skips the nodes.
+
+It is not an `if` statement per se, because behavior tree does not have
+the concept of a statement.
+It is internally just a behavior node, having a special syntax for the
+ease of editing and understanding.
+
+The code above desugars into this:
+
+```
+tree main = Sequence {
+    if {
+        ConditionNode
+        Sequence {
+            Yes
+        }
+    }
+}
+```
+
+As you may expect, you can put `else` clause.
+
+```
+tree main = Sequence {
+    if (ConditionNode) {
+        Yes
+    } else {
+        No
+    }
+}
+```
+
+`if` is a built-in node type, which can take 2 or 3 child nodes.
+The first child is the condition, the second is the `then` clause, and
+the optional third child is the `else` clause.
+`then` and `else` clause are implicitly wrapped in a `Sequence`.
+
+The syntax also supports negation operator (`!`) in front of the condition node.
+This code below is
+
+```
+tree main = Sequence {
+    if (!ConditionNode) {
+        Yes
+    }
+}
+```
+
+equivalent to this one:
+
+```
+tree main = Sequence {
+    if (ConditionNode) {
+    } else {
+        Yes
+    }
+}
+```
+
+`if` node without else clause is semantically the same as a Sequence node like below,
+but Sequence or Fallback nodes cannot represent `else` clause easily.
+
+```
+tree main = Sequence {
+    Sequence {
+        ConditionNode
+        Sequence {
+            Yes
+        }
+    }
+}
+```
+
+
+
 ### Syntax specification
 
 Here is a pseudo-EBNF notation of the syntax.
@@ -410,7 +498,13 @@ port-def = ( "in" | "out" | "inout" ) tree-port-name
 
 tree-port-name = identifier
 
-node = node-name [ "(" port-list ")" ] [ "{" node* "}" ]
+node = if-syntax | node-syntax
+
+if-syntax = "if" "(" conditional ")"
+
+conditional = "!" conditional | node-syntax
+
+node-syntax = node-name [ "(" port-list ")" ] [ "{" node* "}" ]
 
 port-list = port [ "," port-list ]
 
