@@ -197,7 +197,7 @@ tree main = Sequence {
 }
 
 #[test]
-fn condition_not_node() {
+fn condition_false_node() {
     let (_, tree_source) = crate::parse_file(
         r#"
 tree main = Sequence {
@@ -256,4 +256,66 @@ tree main = Sequence {
     );
     assert_eq!(result, BehaviorResult::Success);
     assert_eq!(values, vec![96]);
+}
+
+#[test]
+fn condition_not_node() {
+    let (_, tree_source) = crate::parse_file(
+        r#"
+tree main = Sequence {
+    if (!ConditionNode) {
+        SendToArg (input <- "42")
+    }
+}
+"#,
+    )
+    .unwrap();
+
+    let mut registry = Registry::default();
+    registry.register("ConditionNode", boxify(|| ConditionNode));
+    registry.register("SendToArg", boxify(|| SendToArg));
+    let mut tree = load(&tree_source, &registry, true).unwrap();
+
+    let mut values = vec![];
+    let result = tree.tick(
+        &mut |val| {
+            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            None
+        },
+        &mut Context::default(),
+    );
+    assert_eq!(result, BehaviorResult::Success);
+    assert!(values.is_empty());
+}
+
+#[test]
+fn condition_not_else_node() {
+    let (_, tree_source) = crate::parse_file(
+        r#"
+tree main = Sequence {
+    if (!ConditionNode (input <- "false")) {
+        SendToArg (input <- "42")
+    } else {
+        SendToArg (input <- "96")
+    }
+}
+"#,
+    )
+    .unwrap();
+
+    let mut registry = Registry::default();
+    registry.register("ConditionNode", boxify(|| ConditionNode));
+    registry.register("SendToArg", boxify(|| SendToArg));
+    let mut tree = load(&tree_source, &registry, true).unwrap();
+
+    let mut values = vec![];
+    let result = tree.tick(
+        &mut |val| {
+            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            None
+        },
+        &mut Context::default(),
+    );
+    assert_eq!(result, BehaviorResult::Success);
+    assert_eq!(values, vec![42]);
 }

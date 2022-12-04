@@ -79,16 +79,28 @@ fn ports_def<'src>(i: &'src str) -> IResult<&'src str, Vec<PortDef<'src>>> {
     Ok((i, v))
 }
 
+fn open_paren(i: &str) -> IResult<&str, ()> {
+    value((), delimited(space0, char('('), space0))(i)
+}
+
+fn close_paren(i: &str) -> IResult<&str, ()> {
+    value((), delimited(space0, char(')'), space0))(i)
+}
+
+fn open_brace(i: &str) -> IResult<&str, ()> {
+    value((), delimited(space0, char('{'), space0))(i)
+}
+
+fn close_brace(i: &str) -> IResult<&str, ()> {
+    value((), delimited(space0, char('}'), space0))(i)
+}
+
 pub fn node_def<'src>(i: &'src str) -> IResult<&'src str, NodeDef<'src>> {
     let (i, _) = delimited(multispace0, tag("node"), space0)(i)?;
 
     let (i, name) = delimited(space0, alphanumeric1, space0)(i)?;
 
-    let (i, ports) = delimited(
-        delimited(space0, char('{'), space0),
-        ports_def,
-        delimited(space0, char('}'), space0),
-    )(i)?;
+    let (i, ports) = delimited(open_brace, ports_def, close_brace)(i)?;
 
     Ok((i, NodeDef { name, ports }))
 }
@@ -105,6 +117,7 @@ pub struct TreeDef<'src> {
 }
 
 impl<'src> TreeDef<'src> {
+    #[allow(dead_code)]
     fn new(ty: &'src str) -> Self {
         Self {
             ty,
@@ -113,6 +126,7 @@ impl<'src> TreeDef<'src> {
         }
     }
 
+    #[allow(dead_code)]
     fn new_with_child(ty: &'src str, child: TreeDef<'src>) -> Self {
         Self {
             ty,
@@ -146,9 +160,9 @@ pub struct PortMap<'src> {
 
 fn subtree_ports_def<'src>(i: &'src str) -> IResult<&'src str, Vec<PortDef<'src>>> {
     let (i, ports) = delimited(
-        delimited(space0, char('('), space0),
+        open_paren,
         many0(delimited(space0, port_def, opt(char(',')))),
-        delimited(space0, char(')'), space0),
+        close_paren,
     )(i)?;
     Ok((i, ports))
 }
@@ -187,28 +201,12 @@ fn tree_children(i: &str) -> IResult<&str, Vec<TreeDef>> {
     let (i, v) = many0(delimited(
         space0,
         alt((parse_condition_node, parse_tree_node)),
-        many0(pair(space0, newlines)),
+        many0(newlines),
     ))(i)?;
 
     let (i, _) = many0(newlines)(i)?;
 
     Ok((i, v))
-}
-
-fn open_paren(i: &str) -> IResult<&str, ()> {
-    value((), delimited(space0, char('('), space0))(i)
-}
-
-fn close_paren(i: &str) -> IResult<&str, ()> {
-    value((), delimited(space0, char(')'), space0))(i)
-}
-
-fn open_brace(i: &str) -> IResult<&str, ()> {
-    value((), delimited(space0, char('{'), space0))(i)
-}
-
-fn close_brace(i: &str) -> IResult<&str, ()> {
-    value((), delimited(space0, char('}'), space0))(i)
 }
 
 fn parse_tree_node(i: &str) -> IResult<&str, TreeDef> {
@@ -228,10 +226,22 @@ fn parse_tree_node(i: &str) -> IResult<&str, TreeDef> {
     ))
 }
 
+fn parse_conditional_expr(i: &str) -> IResult<&str, TreeDef> {
+    let (i, excl) = opt(delimited(space0, char('!'), space0))(i)?;
+
+    if excl.is_some() {
+        let (i, res) = parse_conditional_expr(i)?;
+
+        Ok((i, TreeDef::new_with_child("Inverter", res)))
+    } else {
+        parse_tree_node(i)
+    }
+}
+
 fn parse_condition_node(i: &str) -> IResult<&str, TreeDef> {
     let (i, _ty) = delimited(space0, tag("if"), space0)(i)?;
 
-    let (i, subnode) = delimited(open_paren, parse_tree_node, close_paren)(i)?;
+    let (i, subnode) = delimited(open_paren, parse_conditional_expr, close_paren)(i)?;
 
     let (i, children) = delimited(open_brace, tree_children, close_brace)(i)?;
 

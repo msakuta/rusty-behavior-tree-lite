@@ -430,4 +430,5 @@ blackboard-port-name = identifier
   * [x] Decorator nodes
 * [x] Performance friendly blackboard keys
 * [x] DSL for defining behavior tree structure
+  * [ ] Programming language-like flow control syntax
 * [ ] Static type checking for behavior tree definition file
