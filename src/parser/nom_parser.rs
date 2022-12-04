@@ -2,7 +2,7 @@ use nom::{
     branch::alt,
     bytes::complete::tag,
     character::complete::{alpha1, alphanumeric1, char, multispace0, none_of, one_of, space0},
-    combinator::{opt, recognize},
+    combinator::{opt, recognize, value},
     multi::{many0, many1},
     sequence::{delimited, pair, preceded, terminated},
     IResult,
@@ -195,20 +195,28 @@ fn tree_children(i: &str) -> IResult<&str, Vec<TreeDef>> {
     Ok((i, v))
 }
 
+fn open_paren(i: &str) -> IResult<&str, ()> {
+    value((), delimited(space0, char('('), space0))(i)
+}
+
+fn close_paren(i: &str) -> IResult<&str, ()> {
+    value((), delimited(space0, char(')'), space0))(i)
+}
+
+fn open_brace(i: &str) -> IResult<&str, ()> {
+    value((), delimited(space0, char('{'), space0))(i)
+}
+
+fn close_brace(i: &str) -> IResult<&str, ()> {
+    value((), delimited(space0, char('}'), space0))(i)
+}
+
 fn parse_tree_node(i: &str) -> IResult<&str, TreeDef> {
     let (i, ty) = delimited(space0, identifier, space0)(i)?;
 
-    let (i, input_ports) = opt(delimited(
-        delimited(space0, char('('), space0),
-        port_maps,
-        delimited(space0, char(')'), space0),
-    ))(i)?;
+    let (i, input_ports) = opt(delimited(open_paren, port_maps, close_paren))(i)?;
 
-    let (i, children) = opt(delimited(
-        delimited(space0, char('{'), space0),
-        tree_children,
-        delimited(space0, char('}'), space0),
-    ))(i)?;
+    let (i, children) = opt(delimited(open_brace, tree_children, close_brace))(i)?;
 
     Ok((
         i,
@@ -223,25 +231,23 @@ fn parse_tree_node(i: &str) -> IResult<&str, TreeDef> {
 fn parse_condition_node(i: &str) -> IResult<&str, TreeDef> {
     let (i, _ty) = delimited(space0, tag("if"), space0)(i)?;
 
-    let (i, subnode) = delimited(
-        delimited(space0, char('('), space0),
-        parse_tree_node,
-        delimited(space0, char(')'), space0),
-    )(i)?;
+    let (i, subnode) = delimited(open_paren, parse_tree_node, close_paren)(i)?;
 
-    let (i, children) = delimited(
-        delimited(space0, char('{'), space0),
+    let (i, children) = delimited(open_brace, tree_children, close_brace)(i)?;
+
+    let (i, else_children) = opt(delimited(
+        pair(delimited(space0, tag("else"), space0), open_brace),
         tree_children,
-        delimited(space0, char('}'), space0),
-    )(i)?;
+        close_brace,
+    ))(i)?;
 
-    Ok((
-        i,
-        TreeDef::new_with_children(
-            "if",
-            vec![subnode, TreeDef::new_with_children("Sequence", children)],
-        ),
-    ))
+    let mut children = vec![subnode, TreeDef::new_with_children("Sequence", children)];
+
+    if let Some(else_children) = else_children {
+        children.push(TreeDef::new_with_children("Sequence", else_children));
+    }
+
+    Ok((i, TreeDef::new_with_children("if", children)))
 }
 
 fn port_maps(i: &str) -> IResult<&str, Vec<PortMap>> {

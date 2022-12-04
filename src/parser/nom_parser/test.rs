@@ -403,3 +403,40 @@ tree main = Sequence {
         ))
     );
 }
+
+#[test]
+fn test_condition_else() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    if (ConditionNode) {
+        Yes
+    } else {
+        No
+    }
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_child(
+                        "Sequence",
+                        TreeDef::new_with_children(
+                            "if",
+                            vec![
+                                TreeDef::new("ConditionNode"),
+                                TreeDef::new_with_child("Sequence", TreeDef::new("Yes")),
+                                TreeDef::new_with_child("Sequence", TreeDef::new("No")),
+                            ],
+                        )
+                    )
+                )]
+            }
+        ))
+    );
+}
