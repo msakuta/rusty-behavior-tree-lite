@@ -510,6 +510,36 @@ fn test_var() {
         parse_file(
             "
 tree main = Sequence {
+    var a
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![],
+                        vec![VarDef {
+                            name: "a",
+                            init: None,
+                        }],
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_var_def() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
     var a = true
 }
 "
