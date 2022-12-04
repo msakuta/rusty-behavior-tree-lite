@@ -480,6 +480,51 @@ tree main = Sequence {
 ```
 
 
+### Blackboard variable declarations
+
+You can optionally declare and initialize a blackboard variable.
+It can be used as a node name, and its value is evaluated as a boolean.
+So, you can put the variable into a `if` condition.
+
+```
+tree main = Sequence {
+    var flag = true
+    if (flag) {
+        Yes
+    }
+}
+```
+
+Currently, only `true` or `false` is allowed as the initializer (the right hand side of `=`).
+
+The variable declaration with initialization will desugar into a `SetBool` node.
+A reference to a variable name will desugar into a `IsTrue` node.
+
+```
+tree main = Sequence {
+    SetBool (value <- "true", output -> flag)
+    if (IsTrue (input <- flag)) {
+        Yes
+    }
+}
+```
+
+However, it is necessary to declare the variable name in order to use it as a
+variable reference.
+For example, the code below will be a `load` error for `MissingNode`, even though
+the variable is set with `SetBool`.
+
+```
+tree main = Sequence {
+    SetBool (value <- "true", output -> flag)
+    if (flag) {
+        Yes
+    }
+}
+```
+
+This design is a step towards statically checked source code.
+
 
 ### Syntax specification
 
@@ -498,7 +543,7 @@ port-def = ( "in" | "out" | "inout" ) tree-port-name
 
 tree-port-name = identifier
 
-node = if-syntax | node-syntax
+node = if-syntax | node-syntax | var-def-syntax
 
 if-syntax = "if" "(" conditional ")"
 
@@ -513,6 +558,10 @@ port = node-port-name ("<-" | "->" | "<->") blackboard-port-name
 node-port-name = identifier
 
 blackboard-port-name = identifier
+
+var-def-syntax = "var" identifier "=" initializer
+
+initializer = "true" | "false"
 ```
 
 ## TODO
