@@ -454,5 +454,52 @@ impl BehaviorNode for IsTrueNode {
     }
 }
 
+#[derive(Default)]
+pub struct IfNode {
+    children: Vec<BehaviorNodeContainer>,
+}
+
+impl BehaviorNode for IfNode {
+    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        let mut ticker = |node: &mut BehaviorNodeContainer| {
+            std::mem::swap(&mut node.blackboard_map, &mut ctx.blackboard_map);
+            let res = node.node.tick(arg, ctx);
+            std::mem::swap(&mut node.blackboard_map, &mut ctx.blackboard_map);
+            res
+        };
+
+        let condition_result = self
+            .children
+            .first_mut()
+            .map(&mut ticker)
+            .unwrap_or(BehaviorResult::Fail);
+
+        if matches!(condition_result, BehaviorResult::Success) {
+            self.children
+                .get_mut(1)
+                .map(&mut ticker)
+                .unwrap_or(BehaviorResult::Fail)
+        } else {
+            // Be aware that lack of else clause is not an error, so the result is Success.
+            self.children
+                .get_mut(2)
+                .map(&mut ticker)
+                .unwrap_or(BehaviorResult::Success)
+        }
+    }
+
+    fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+        if self.children.len() < 3 {
+            self.children.push(BehaviorNodeContainer {
+                node: val,
+                blackboard_map,
+            });
+            Ok(())
+        } else {
+            Err(AddChildError::TooManyNodes)
+        }
+    }
+}
+
 #[cfg(test)]
 mod test;
