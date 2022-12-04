@@ -383,6 +383,37 @@ tree main = Sequence {
 }
 
 #[test]
+fn condition_var_false() {
+    let (_, tree_source) = crate::parse_file(
+        r#"
+tree main = Sequence {
+    var flag = false
+    if (!flag) {
+        SendToArg (input <- "42")
+    }
+}
+"#,
+    )
+    .unwrap();
+
+    let mut registry = Registry::default();
+    registry.register("ConditionNode", boxify(|| ConditionNode));
+    registry.register("SendToArg", boxify(|| SendToArg));
+    let mut tree = load(&tree_source, &registry, true).unwrap();
+
+    let mut values = vec![];
+    let result = tree.tick(
+        &mut |val| {
+            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            None
+        },
+        &mut Context::default(),
+    );
+    assert_eq!(result, BehaviorResult::Success);
+    assert_eq!(values, vec![42]);
+}
+
+#[test]
 fn variable_without_declare() {
     let (_, tree_source) = crate::parse_file(
         r#"
