@@ -381,3 +381,25 @@ tree main = Sequence {
     assert_eq!(result, BehaviorResult::Success);
     assert_eq!(values, vec![42]);
 }
+
+#[test]
+fn variable_without_declare() {
+    let (_, tree_source) = crate::parse_file(
+        r#"
+tree main = Sequence {
+    SetBool (value <- "true", output -> flag)
+    if (flag) {
+        Yes
+    }
+}"#,
+    )
+    .unwrap();
+
+    let registry = Registry::default();
+    let res = load(&tree_source, &registry, true);
+    if let Err(err) = res {
+        assert_eq!(err, LoadError::MissingNode("flag".to_owned()));
+    } else {
+        panic!("Should fail");
+    }
+}

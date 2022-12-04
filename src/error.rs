@@ -25,7 +25,7 @@ impl From<serde_yaml::Error> for LoadYamlError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 #[non_exhaustive]
 pub enum AddChildError {
     TooManyNodes,
@@ -43,7 +43,7 @@ pub type AddChildResult = Result<(), AddChildError>;
 
 impl std::error::Error for AddChildError {}
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 #[non_exhaustive]
 pub enum LoadError {
     MissingTree,
