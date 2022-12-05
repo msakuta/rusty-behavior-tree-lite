@@ -298,6 +298,20 @@ If your `BehaviorNode::provided_ports` and the source file's direction arrow (`<
 let tree = load(&tree_source, &registry, check_ports)?;
 ```
 
+
+### Line comments
+
+You can put a line comment starting with a hash (`#`).
+
+```
+tree main = Sequence { # This is a comment after opening brace.
+           # This is a comment in a whole line.
+    var a  # This is a comment after a variable declaration.
+    Yes    # This is a comment after a node.
+}          # This is a comment after a closing brace.
+```
+
+
 ### Node definition
 
 A node can be specified like below.

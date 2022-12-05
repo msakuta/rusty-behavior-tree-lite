@@ -585,7 +585,7 @@ tree main = Sequence { # This is a comment after opening brace.
            # This is a comment in a whole line.
     var a  # This is a comment after a variable declaration.
     Yes    # This is a comment after a node.
-}
+}          # This is a comment after a closing brace.
 ";
     assert_eq!(
         parse_file(source),
