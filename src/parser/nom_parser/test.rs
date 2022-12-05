@@ -577,3 +577,34 @@ tree main = Sequence {
         ))
     );
 }
+
+#[test]
+fn test_line_comment() {
+    let source = "
+tree main = Sequence { # This is a comment after opening brace.
+           # This is a comment in a whole line.
+    var a  # This is a comment after a variable declaration.
+    Yes    # This is a comment after a node.
+}
+";
+    assert_eq!(
+        parse_file(source),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![TreeDef::new("Yes")],
+                        vec![VarDef {
+                            name: "a",
+                            init: None,
+                        }],
+                    )
+                )]
+            }
+        ))
+    );
+}

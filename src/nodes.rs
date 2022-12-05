@@ -496,12 +496,11 @@ impl BehaviorNode for IfNode {
             .unwrap_or(BehaviorResult::Fail);
 
         match condition_result {
-            BehaviorResult::Success => {
-                self.children
-                    .get_mut(1)
-                    .map(&mut ticker)
-                    .unwrap_or(BehaviorResult::Fail)
-            }
+            BehaviorResult::Success => self
+                .children
+                .get_mut(1)
+                .map(&mut ticker)
+                .unwrap_or(BehaviorResult::Fail),
             BehaviorResult::Fail => {
                 // Be aware that lack of else clause is not an error, so the result is Success.
                 self.children

@@ -1,10 +1,10 @@
 use nom::{
     branch::alt,
-    bytes::complete::tag,
+    bytes::complete::{is_not, tag},
     character::complete::{alpha1, alphanumeric1, char, multispace0, none_of, one_of, space0},
     combinator::{opt, recognize, value},
     multi::{many0, many1},
-    sequence::{delimited, pair, preceded, terminated},
+    sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
 
@@ -268,6 +268,19 @@ fn parse_tree(i: &str) -> IResult<&str, TreeRootDef> {
     ))
 }
 
+fn line_comment(i: &str) -> IResult<&str, Option<TreeElem>> {
+    let (i, _) = tuple((space0, char('#'), is_not("\n\r")))(i)?;
+
+    Ok((i, None))
+}
+
+fn some<I, R>(f: impl Fn(I) -> IResult<I, R>) -> impl Fn(I) -> IResult<I, Option<R>> {
+    move |i| {
+        let (i, res) = f(i)?;
+        Ok((i, Some(res)))
+    }
+}
+
 #[derive(Debug)]
 enum TreeElem<'src> {
     Node(TreeDef<'src>),
@@ -279,13 +292,18 @@ fn tree_children(i: &str) -> IResult<&str, Vec<TreeElem>> {
 
     let (i, v) = many0(delimited(
         space0,
-        alt((var_decl, parse_condition_node, parse_tree_elem)),
+        alt((
+            line_comment,
+            some(var_decl),
+            some(parse_condition_node),
+            some(parse_tree_elem),
+        )),
         many0(newlines),
     ))(i)?;
 
     let (i, _) = many0(newlines)(i)?;
 
-    Ok((i, v))
+    Ok((i, v.into_iter().filter_map(|v| v).collect()))
 }
 
 fn parse_tree_node(i: &str) -> IResult<&str, TreeDef> {
@@ -294,6 +312,8 @@ fn parse_tree_node(i: &str) -> IResult<&str, TreeDef> {
     let (i, input_ports) = opt(delimited(open_paren, port_maps, close_paren))(i)?;
 
     let (i, children) = opt(delimited(open_brace, tree_children, close_brace))(i)?;
+
+    let (i, _) = opt(line_comment)(i)?;
 
     Ok((
         i,
@@ -360,6 +380,8 @@ fn var_decl(i: &str) -> IResult<&str, TreeElem> {
         alt((tag("true"), tag("false"))),
         space0,
     ))(i)?;
+
+    let (i, _) = opt(line_comment)(i)?;
 
     Ok((i, TreeElem::Var(VarDef { name, init })))
 }
