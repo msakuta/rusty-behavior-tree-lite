@@ -581,6 +581,8 @@ tree main = Sequence {
 #[test]
 fn test_line_comment() {
     let source = "
+# This is a comment at the top level.
+#
 tree main = Sequence { # This is a comment after opening brace.
            # This is a comment in a whole line.
     var a  # This is a comment after a variable declaration.

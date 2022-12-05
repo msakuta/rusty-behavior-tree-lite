@@ -1,7 +1,9 @@
 use nom::{
     branch::alt,
     bytes::complete::{is_not, tag},
-    character::complete::{alpha1, alphanumeric1, char, multispace0, none_of, one_of, space0},
+    character::complete::{
+        alpha1, alphanumeric1, char, multispace0, newline, none_of, one_of, space0,
+    },
     combinator::{opt, recognize, value},
     multi::{many0, many1},
     sequence::{delimited, pair, preceded, terminated, tuple},
@@ -268,10 +270,14 @@ fn parse_tree(i: &str) -> IResult<&str, TreeRootDef> {
     ))
 }
 
-fn line_comment(i: &str) -> IResult<&str, Option<TreeElem>> {
-    let (i, _) = tuple((space0, char('#'), is_not("\n\r")))(i)?;
+fn line_comment<T>(i: &str) -> IResult<&str, Option<T>> {
+    let (i, _) = tuple((space0, char('#'), opt(is_not("\n\r"))))(i)?;
 
     Ok((i, None))
+}
+
+fn line_comment_tree_elem(i: &str) -> IResult<&str, Option<TreeElem>> {
+    line_comment::<TreeElem>(i)
 }
 
 fn some<I, R>(f: impl Fn(I) -> IResult<I, R>) -> impl Fn(I) -> IResult<I, Option<R>> {
@@ -313,7 +319,7 @@ fn parse_tree_node(i: &str) -> IResult<&str, TreeDef> {
 
     let (i, children) = opt(delimited(open_brace, tree_children, close_brace))(i)?;
 
-    let (i, _) = opt(line_comment)(i)?;
+    let (i, _) = opt(line_comment_tree_elem)(i)?;
 
     Ok((
         i,
@@ -381,7 +387,7 @@ fn var_decl(i: &str) -> IResult<&str, TreeElem> {
         space0,
     ))(i)?;
 
-    let (i, _) = opt(line_comment)(i)?;
+    let (i, _) = opt(line_comment_tree_elem)(i)?;
 
     Ok((i, TreeElem::Var(VarDef { name, init })))
 }
@@ -462,26 +468,31 @@ pub fn parse_file(i: &str) -> IResult<&str, TreeSource> {
     }
 
     let (i, stmts) = many0(alt((
-        |i| {
+        delimited(multispace0, line_comment, newline),
+        some(|i| {
             let (i, node) = node_def(i)?;
             Ok((i, NodeOrTree::Node(node)))
-        },
-        |i| {
+        }),
+        some(|i| {
             let (i, tree) = parse_tree(i)?;
             Ok((i, NodeOrTree::Tree(tree)))
-        },
+        }),
     )))(i)?;
 
     // Eat up trailing newlines to indicate that the input was thoroughly consumed
     let (i, _) = multispace0(i)?;
 
-    let (node_defs, tree_defs) = stmts.into_iter().fold((vec![], vec![]), |mut acc, cur| {
-        match cur {
-            NodeOrTree::Node(node) => acc.0.push(node),
-            NodeOrTree::Tree(tree) => acc.1.push(tree),
-        }
-        acc
-    });
+    let (node_defs, tree_defs) =
+        stmts
+            .into_iter()
+            .filter_map(|v| v)
+            .fold((vec![], vec![]), |mut acc, cur| {
+                match cur {
+                    NodeOrTree::Node(node) => acc.0.push(node),
+                    NodeOrTree::Tree(tree) => acc.1.push(tree),
+                }
+                acc
+            });
 
     Ok((
         i,
