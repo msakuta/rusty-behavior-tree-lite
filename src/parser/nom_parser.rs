@@ -258,7 +258,7 @@ fn parse_tree(i: &str) -> IResult<&str, TreeRootDef> {
 
     let (i, _) = delimited(space0, tag("="), space0)(i)?;
 
-    let (i, root) = parse_tree_node(i)?;
+    let (i, root) = parse_conditional_expr(i)?;
 
     Ok((
         i,
@@ -332,7 +332,7 @@ fn parse_tree_node(i: &str) -> IResult<&str, TreeDef> {
 }
 
 fn parse_tree_elem(i: &str) -> IResult<&str, TreeElem> {
-    let (i, elem) = parse_tree_node(i)?;
+    let (i, elem) = parse_conditional_expr(i)?;
     Ok((i, TreeElem::Node(elem)))
 }
 

@@ -610,3 +610,53 @@ tree main = Sequence { # This is a comment after opening brace.
         ))
     );
 }
+
+#[test]
+fn test_var_cond() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = false
+    !a
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![
+                            TreeDef::new_with_ports(
+                                "SetBool",
+                                vec![
+                                    PortMap {
+                                        node_port: "value",
+                                        blackboard_value: BlackboardValue::Literal(
+                                            "false".to_owned()
+                                        ),
+                                        ty: PortType::Input,
+                                    },
+                                    PortMap {
+                                        node_port: "output",
+                                        blackboard_value: BlackboardValue::Ref("a"),
+                                        ty: PortType::Output,
+                                    }
+                                ]
+                            ),
+                            TreeDef::new_with_child("Inverter", TreeDef::new("a"))
+                        ],
+                        vec![VarDef {
+                            name: "a",
+                            init: Some("false"),
+                        }],
+                    )
+                )]
+            }
+        ))
+    );
+}
