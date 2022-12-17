@@ -559,11 +559,13 @@ port-def = ( "in" | "out" | "inout" ) tree-port-name
 
 tree-port-name = identifier
 
-node = if-syntax | node-syntax | var-def-syntax
+node = if-syntax | conditional | var-def-syntax
 
 if-syntax = "if" "(" conditional ")"
 
-conditional = "!" conditional | node-syntax
+conditional-factor = "!" conditional-factor | node-syntax
+
+conditional =  conditional-factor | conditional "&&" conditional-factor
 
 node-syntax = node-name [ "(" port-list ")" ] [ "{" node* "}" ]
 

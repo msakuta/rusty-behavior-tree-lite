@@ -5,7 +5,7 @@ use nom::{
         alpha1, alphanumeric1, char, multispace0, newline, none_of, one_of, space0,
     },
     combinator::{opt, recognize, value},
-    multi::{many0, many1},
+    multi::{many0, many1, separated_list1},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
@@ -336,15 +336,26 @@ fn parse_tree_elem(i: &str) -> IResult<&str, TreeElem> {
     Ok((i, TreeElem::Node(elem)))
 }
 
-fn parse_conditional_expr(i: &str) -> IResult<&str, TreeDef> {
+fn parse_conditional_factor(i: &str) -> IResult<&str, TreeDef> {
     let (i, excl) = opt(delimited(space0, char('!'), space0))(i)?;
 
     if excl.is_some() {
-        let (i, res) = parse_conditional_expr(i)?;
+        let (i, res) = parse_conditional_factor(i)?;
 
         Ok((i, TreeDef::new_with_child("Inverter", res)))
     } else {
         parse_tree_node(i)
+    }
+}
+
+fn parse_conditional_expr(i: &str) -> IResult<&str, TreeDef> {
+    let (i, children) = separated_list1(tag("&&"), parse_conditional_factor)(i)?;
+
+    if children.len() == 1 {
+        Ok((i, children.into_iter().next().unwrap()))
+    } else {
+        dbg!(&children);
+        Ok((i, TreeDef::new_with_children("Sequence", children)))
     }
 }
 

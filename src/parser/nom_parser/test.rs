@@ -660,3 +660,83 @@ tree main = Sequence {
         ))
     );
 }
+
+#[test]
+fn test_cond_and() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = false
+    var b = true
+    !a && b
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![
+                            TreeDef::new_with_ports(
+                                "SetBool",
+                                vec![
+                                    PortMap {
+                                        node_port: "value",
+                                        blackboard_value: BlackboardValue::Literal(
+                                            "false".to_owned()
+                                        ),
+                                        ty: PortType::Input,
+                                    },
+                                    PortMap {
+                                        node_port: "output",
+                                        blackboard_value: BlackboardValue::Ref("a"),
+                                        ty: PortType::Output,
+                                    }
+                                ]
+                            ),
+                            TreeDef::new_with_ports(
+                                "SetBool",
+                                vec![
+                                    PortMap {
+                                        node_port: "value",
+                                        blackboard_value: BlackboardValue::Literal(
+                                            "true".to_owned()
+                                        ),
+                                        ty: PortType::Input,
+                                    },
+                                    PortMap {
+                                        node_port: "output",
+                                        blackboard_value: BlackboardValue::Ref("b"),
+                                        ty: PortType::Output,
+                                    }
+                                ]
+                            ),
+                            TreeDef::new_with_children(
+                                "Sequence",
+                                vec![
+                                    TreeDef::new_with_child("Inverter", TreeDef::new("a")),
+                                    TreeDef::new("b")
+                                ]
+                            ),
+                        ],
+                        vec![
+                            VarDef {
+                                name: "a",
+                                init: Some("false"),
+                            },
+                            VarDef {
+                                name: "b",
+                                init: Some("true"),
+                            }
+                        ],
+                    )
+                )]
+            }
+        ))
+    );
+}
