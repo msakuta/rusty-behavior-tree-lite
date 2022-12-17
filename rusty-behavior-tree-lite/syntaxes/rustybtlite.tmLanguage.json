@@ -1,0 +1,73 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "rusty-behavior-tree-lite",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#punctuations"
+		},
+		{
+			"include": "#arrows"
+		},
+		{
+			"include": "#identifiers"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.rustybtlite",
+				"match": "\\b(in|out|true|false|if|tree|node|var)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.rustybtlite",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.rustybtlite",
+					"match": "\\\\."
+				}
+			]
+		},
+		"comments": {
+			"name": "comment.line.hash.rustybtlite",
+			"begin": "#",
+			"end": "\n",
+			"patterns": [
+				{
+					"name": "comment.line.hash.rustybtlite",
+					"match": "\\\\."
+				}
+			]
+		},
+		"punctuations": {
+			"patterns": [{
+				"name": "punctuation.comma.rustybtlite",
+				"match": ","
+			}]
+		},
+		"arrows": {
+			"patterns": [{
+				"name": "keyword.operator.arrow.rustybtlite",
+				"match": "(->|<-)"
+			}]
+		},
+		"identifiers": {
+			"patterns": [{
+				"name": "variable.other.rustybtlite",
+				"match": "\\w+"
+			}]
+		}
+	},
+	"scopeName": "source.rustybtlite"
+}

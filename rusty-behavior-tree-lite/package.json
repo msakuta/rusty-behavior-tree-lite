@@ -1,0 +1,25 @@
+{
+  "name": "rusty-behavior-tree-lite",
+  "displayName": "rusty_behavior_tree_lite",
+  "description": "Syntax highlighting support for rusty-behavior-tree-lite",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "rustybtlite",
+      "aliases": ["rusty-behavior-tree-lite", "rustybtlite"],
+      "extensions": [".txt"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "rustybtlite",
+      "scopeName": "source.rustybtlite",
+      "path": "./syntaxes/rustybtlite.tmLanguage.json"
+    }]
+  }
+}
