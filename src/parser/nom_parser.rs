@@ -348,14 +348,23 @@ fn parse_conditional_factor(i: &str) -> IResult<&str, TreeDef> {
     }
 }
 
-fn parse_conditional_expr(i: &str) -> IResult<&str, TreeDef> {
+fn parse_conditional_and(i: &str) -> IResult<&str, TreeDef> {
     let (i, children) = separated_list1(tag("&&"), parse_conditional_factor)(i)?;
 
     if children.len() == 1 {
         Ok((i, children.into_iter().next().unwrap()))
     } else {
-        dbg!(&children);
         Ok((i, TreeDef::new_with_children("Sequence", children)))
+    }
+}
+
+fn parse_conditional_expr(i: &str) -> IResult<&str, TreeDef> {
+    let (i, children) = separated_list1(tag("||"), parse_conditional_and)(i)?;
+
+    if children.len() == 1 {
+        Ok((i, children.into_iter().next().unwrap()))
+    } else {
+        Ok((i, TreeDef::new_with_children("Fallback", children)))
     }
 }
 

@@ -534,6 +534,24 @@ tree main = Sequence {
     );
 }
 
+fn set_bool<'a>(name: &'a str, value: &str) -> TreeDef<'a> {
+    TreeDef::new_with_ports(
+        "SetBool",
+        vec![
+            PortMap {
+                node_port: "value",
+                blackboard_value: BlackboardValue::Literal(value.to_owned()),
+                ty: PortType::Input,
+            },
+            PortMap {
+                node_port: "output",
+                blackboard_value: BlackboardValue::Ref(name),
+                ty: PortType::Output,
+            },
+        ],
+    )
+}
+
 #[test]
 fn test_var_def() {
     assert_eq!(
@@ -552,21 +570,7 @@ tree main = Sequence {
                     "main",
                     TreeDef::new_with_children_and_vars(
                         "Sequence",
-                        vec![TreeDef::new_with_ports(
-                            "SetBool",
-                            vec![
-                                PortMap {
-                                    node_port: "value",
-                                    blackboard_value: BlackboardValue::Literal("true".to_owned()),
-                                    ty: PortType::Input,
-                                },
-                                PortMap {
-                                    node_port: "output",
-                                    blackboard_value: BlackboardValue::Ref("a"),
-                                    ty: PortType::Output,
-                                }
-                            ]
-                        )],
+                        vec![set_bool("a", "true")],
                         vec![VarDef {
                             name: "a",
                             init: Some("true"),
@@ -631,23 +635,7 @@ tree main = Sequence {
                     TreeDef::new_with_children_and_vars(
                         "Sequence",
                         vec![
-                            TreeDef::new_with_ports(
-                                "SetBool",
-                                vec![
-                                    PortMap {
-                                        node_port: "value",
-                                        blackboard_value: BlackboardValue::Literal(
-                                            "false".to_owned()
-                                        ),
-                                        ty: PortType::Input,
-                                    },
-                                    PortMap {
-                                        node_port: "output",
-                                        blackboard_value: BlackboardValue::Ref("a"),
-                                        ty: PortType::Output,
-                                    }
-                                ]
-                            ),
+                            set_bool("a", "false"),
                             TreeDef::new_with_child("Inverter", TreeDef::new("a"))
                         ],
                         vec![VarDef {
@@ -682,40 +670,8 @@ tree main = Sequence {
                     TreeDef::new_with_children_and_vars(
                         "Sequence",
                         vec![
-                            TreeDef::new_with_ports(
-                                "SetBool",
-                                vec![
-                                    PortMap {
-                                        node_port: "value",
-                                        blackboard_value: BlackboardValue::Literal(
-                                            "false".to_owned()
-                                        ),
-                                        ty: PortType::Input,
-                                    },
-                                    PortMap {
-                                        node_port: "output",
-                                        blackboard_value: BlackboardValue::Ref("a"),
-                                        ty: PortType::Output,
-                                    }
-                                ]
-                            ),
-                            TreeDef::new_with_ports(
-                                "SetBool",
-                                vec![
-                                    PortMap {
-                                        node_port: "value",
-                                        blackboard_value: BlackboardValue::Literal(
-                                            "true".to_owned()
-                                        ),
-                                        ty: PortType::Input,
-                                    },
-                                    PortMap {
-                                        node_port: "output",
-                                        blackboard_value: BlackboardValue::Ref("b"),
-                                        ty: PortType::Output,
-                                    }
-                                ]
-                            ),
+                            set_bool("a", "false"),
+                            set_bool("b", "true"),
                             TreeDef::new_with_children(
                                 "Sequence",
                                 vec![
@@ -731,6 +687,117 @@ tree main = Sequence {
                             },
                             VarDef {
                                 name: "b",
+                                init: Some("true"),
+                            }
+                        ],
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_cond_or() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = false
+    var b = true
+    a || !b
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![
+                            set_bool("a", "false"),
+                            set_bool("b", "true"),
+                            TreeDef::new_with_children(
+                                "Fallback",
+                                vec![
+                                    TreeDef::new("a"),
+                                    TreeDef::new_with_child("Inverter", TreeDef::new("b"))
+                                ]
+                            ),
+                        ],
+                        vec![
+                            VarDef {
+                                name: "a",
+                                init: Some("false"),
+                            },
+                            VarDef {
+                                name: "b",
+                                init: Some("true"),
+                            }
+                        ],
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_cond_or_and() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = false
+    var b = true
+    var c = true
+    if (!a || b && c) {}
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![
+                            set_bool("a", "false"),
+                            set_bool("b", "true"),
+                            set_bool("c", "true"),
+                            TreeDef::new_with_children(
+                                "if",
+                                vec![
+                                    TreeDef::new_with_children(
+                                        "Fallback",
+                                        vec![
+                                            TreeDef::new_with_child("Inverter", TreeDef::new("a")),
+                                            TreeDef::new_with_children(
+                                                "Sequence",
+                                                vec![TreeDef::new("b"), TreeDef::new("c")]
+                                            )
+                                        ]
+                                    ),
+                                    TreeDef::new("Sequence")
+                                ]
+                            )
+                        ],
+                        vec![
+                            VarDef {
+                                name: "a",
+                                init: Some("false"),
+                            },
+                            VarDef {
+                                name: "b",
+                                init: Some("true"),
+                            },
+                            VarDef {
+                                name: "c",
                                 init: Some("true"),
                             }
                         ],

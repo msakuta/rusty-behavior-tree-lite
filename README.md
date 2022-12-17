@@ -481,6 +481,23 @@ tree main = Sequence {
 }
 ```
 
+You can put logical operators (`&&` and `||`) like conditional expressions in programming languages.
+`&&` is just a shorthand for a Sequence node and `||` is a Fallback node.
+
+```raw
+tree main = Sequence {
+    if (!a || b && c) {}
+}
+```
+
+In fact, a child node is implicitly a logical expression, so you can write like this:
+
+```raw
+tree main = Sequence {
+    !a || b && c
+}
+```
+
 `if` node without else clause is semantically the same as a Sequence node like below,
 but Sequence or Fallback nodes cannot represent `else` clause easily.
 
@@ -565,7 +582,9 @@ if-syntax = "if" "(" conditional ")"
 
 conditional-factor = "!" conditional-factor | node-syntax
 
-conditional =  conditional-factor | conditional "&&" conditional-factor
+conditional-and =  conditional-factor | conditional "&&" conditional-factor
+
+conditional =  conditional-and | conditional "||" conditional-and
 
 node-syntax = node-name [ "(" port-list ")" ] [ "{" node* "}" ]
 
@@ -591,5 +610,5 @@ initializer = "true" | "false"
   * [x] Decorator nodes
 * [x] Performance friendly blackboard keys
 * [x] DSL for defining behavior tree structure
-  * [ ] Programming language-like flow control syntax
+  * [x] Programming language-like flow control syntax
 * [ ] Static type checking for behavior tree definition file
