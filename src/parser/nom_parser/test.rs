@@ -91,12 +91,11 @@ fn test_tree_ports() {
             Ok((
                 "",
                 TreeRootDef::new("main",
-                    TreeDef {
-                        ty: "Sequence",
-                        port_maps: vec![],
-                        children: vec![TreeDef {
-                            ty: "PrintBodyNode",
-                            port_maps: vec![
+                    TreeDef::new_with_child(
+                        "Sequence",
+                        TreeDef::new_with_ports(
+                            "PrintBodyNode",
+                            vec![
                                 PortMap {
                                     ty: PortType::Input,
                                     node_port: "in_socket",
@@ -112,10 +111,9 @@ fn test_tree_ports() {
                                     node_port: "inout_socket",
                                     blackboard_value: BlackboardValue::Ref("inout_val"),
                                 }
-                            ],
-                            children: vec![]
-                        }]
-                    }
+                            ]
+                        )
+                    )
                 )
             ))
         );
@@ -133,12 +131,11 @@ fn test_port_literal() {
             "",
             TreeRootDef::new(
                 "main",
-                TreeDef {
-                    ty: "Sequence",
-                    port_maps: vec![],
-                    children: vec![TreeDef {
-                        ty: "PrintBodyNode",
-                        port_maps: vec![
+                TreeDef::new_with_child(
+                    "Sequence",
+                    TreeDef::new_with_ports(
+                        "PrintBodyNode",
+                        vec![
                             PortMap {
                                 ty: PortType::Input,
                                 node_port: "in_socket",
@@ -149,10 +146,9 @@ fn test_port_literal() {
                                 node_port: "out_socket",
                                 blackboard_value: BlackboardValue::Ref("out_val"),
                             }
-                        ],
-                        children: vec![]
-                    }]
-                }
+                        ]
+                    )
+                )
             )
         ))
     );
@@ -190,12 +186,11 @@ fn test_file() {
                 }],
                 tree_defs: vec![TreeRootDef::new(
                     "main",
-                    TreeDef {
-                        ty: "Sequence",
-                        port_maps: vec![],
-                        children: vec![TreeDef {
-                            ty: "PrintBodyNode",
-                            port_maps: vec![
+                    TreeDef::new_with_child(
+                        "Sequence",
+                        TreeDef::new_with_ports(
+                            "PrintBodyNode",
+                            vec![
                                 PortMap {
                                     ty: PortType::Input,
                                     node_port: "in_socket",
@@ -206,10 +201,9 @@ fn test_file() {
                                     node_port: "out_socket",
                                     blackboard_value: BlackboardValue::Ref("out_val"),
                                 }
-                            ],
-                            children: vec![],
-                        }]
-                    }
+                            ]
+                        )
+                    )
                 )],
             }
         ))
@@ -237,19 +231,17 @@ tree sub(in port, out result) = Sequence {
                 tree_defs: vec![
                     TreeRootDef::new(
                         "main",
-                        TreeDef {
-                            ty: "Sequence",
-                            port_maps: vec![],
-                            children: vec![TreeDef {
-                                ty: "sub",
-                                port_maps: vec![PortMap {
+                        TreeDef::new_with_child(
+                            "Sequence",
+                            TreeDef::new_with_ports(
+                                "sub",
+                                vec![PortMap {
                                     ty: PortType::Input,
                                     node_port: "port",
                                     blackboard_value: BlackboardValue::Ref("input"),
-                                }],
-                                children: vec![],
-                            }]
-                        }
+                                }]
+                            )
+                        )
                     ),
                     TreeRootDef {
                         name: "sub",
@@ -265,12 +257,11 @@ tree sub(in port, out result) = Sequence {
                                 ty: None,
                             }
                         ],
-                        root: TreeDef {
-                            ty: "Sequence",
-                            port_maps: vec![],
-                            children: vec![TreeDef {
-                                ty: "PrintBodyNode",
-                                port_maps: vec![
+                        root: TreeDef::new_with_child(
+                            "Sequence",
+                            TreeDef::new_with_ports(
+                                "PrintBodyNode",
+                                vec![
                                     PortMap {
                                         ty: PortType::Input,
                                         node_port: "in_socket",
@@ -281,10 +272,9 @@ tree sub(in port, out result) = Sequence {
                                         node_port: "out_socket",
                                         blackboard_value: BlackboardValue::Ref("out_val"),
                                     }
-                                ],
-                                children: vec![],
-                            }]
-                        }
+                                ]
+                            )
+                        )
                     }
                 ],
             }
@@ -349,15 +339,14 @@ tree main = Sequence {
                         TreeDef::new_with_children(
                             "if",
                             vec![
-                                TreeDef {
-                                    ty: "ConditionNode",
-                                    port_maps: vec![PortMap {
+                                TreeDef::new_with_ports(
+                                    "ConditionNode",
+                                    vec![PortMap {
                                         ty: PortType::Input,
                                         node_port: "input",
                                         blackboard_value: BlackboardValue::Ref("here"),
-                                    }],
-                                    children: vec![],
-                                },
+                                    }]
+                                ),
                                 TreeDef::new_with_child("Sequence", TreeDef::new("Yes")),
                             ],
                         )
@@ -434,6 +423,486 @@ tree main = Sequence {
                                 TreeDef::new_with_child("Sequence", TreeDef::new("No")),
                             ],
                         )
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_condition_not() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    if (!ConditionNode) {
+        Yes
+    }
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_child(
+                        "Sequence",
+                        TreeDef::new_with_children(
+                            "if",
+                            vec![
+                                TreeDef::new_with_child("Inverter", TreeDef::new("ConditionNode")),
+                                TreeDef::new_with_child("Sequence", TreeDef::new("Yes")),
+                            ],
+                        )
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_condition_not_not() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    if (!!ConditionNode) {
+        Yes
+    }
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_child(
+                        "Sequence",
+                        TreeDef::new_with_children(
+                            "if",
+                            vec![
+                                TreeDef::new_with_child(
+                                    "Inverter",
+                                    TreeDef::new_with_child(
+                                        "Inverter",
+                                        TreeDef::new("ConditionNode")
+                                    )
+                                ),
+                                TreeDef::new_with_child("Sequence", TreeDef::new("Yes")),
+                            ],
+                        )
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_var() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![],
+                        vec![VarDef {
+                            name: "a",
+                            init: None,
+                        }],
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+fn set_bool<'a>(name: &'a str, value: &str) -> TreeDef<'a> {
+    TreeDef::new_with_ports(
+        "SetBool",
+        vec![
+            PortMap {
+                node_port: "value",
+                blackboard_value: BlackboardValue::Literal(value.to_owned()),
+                ty: PortType::Input,
+            },
+            PortMap {
+                node_port: "output",
+                blackboard_value: BlackboardValue::Ref(name),
+                ty: PortType::Output,
+            },
+        ],
+    )
+}
+
+#[test]
+fn test_var_def() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = true
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![set_bool("a", "true")],
+                        vec![VarDef {
+                            name: "a",
+                            init: Some("true"),
+                        }],
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_line_comment() {
+    let source = "
+# This is a comment at the top level.
+#
+tree main = Sequence { # This is a comment after opening brace.
+           # This is a comment in a whole line.
+    var a  # This is a comment after a variable declaration.
+    Yes    # This is a comment after a node.
+}          # This is a comment after a closing brace.
+";
+    assert_eq!(
+        parse_file(source),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![TreeDef::new("Yes")],
+                        vec![VarDef {
+                            name: "a",
+                            init: None,
+                        }],
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_var_cond() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = false
+    !a
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![
+                            set_bool("a", "false"),
+                            TreeDef::new_with_child("Inverter", TreeDef::new("a"))
+                        ],
+                        vec![VarDef {
+                            name: "a",
+                            init: Some("false"),
+                        }],
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_cond_and() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = false
+    var b = true
+    !a && b
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![
+                            set_bool("a", "false"),
+                            set_bool("b", "true"),
+                            TreeDef::new_with_children(
+                                "Sequence",
+                                vec![
+                                    TreeDef::new_with_child("Inverter", TreeDef::new("a")),
+                                    TreeDef::new("b")
+                                ]
+                            ),
+                        ],
+                        vec![
+                            VarDef {
+                                name: "a",
+                                init: Some("false"),
+                            },
+                            VarDef {
+                                name: "b",
+                                init: Some("true"),
+                            }
+                        ],
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_cond_or() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = false
+    var b = true
+    a || !b
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![
+                            set_bool("a", "false"),
+                            set_bool("b", "true"),
+                            TreeDef::new_with_children(
+                                "Fallback",
+                                vec![
+                                    TreeDef::new("a"),
+                                    TreeDef::new_with_child("Inverter", TreeDef::new("b"))
+                                ]
+                            ),
+                        ],
+                        vec![
+                            VarDef {
+                                name: "a",
+                                init: Some("false"),
+                            },
+                            VarDef {
+                                name: "b",
+                                init: Some("true"),
+                            }
+                        ],
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_cond_or_and() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = false
+    var b = true
+    var c = true
+    if (!a || b && c) {}
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![
+                            set_bool("a", "false"),
+                            set_bool("b", "true"),
+                            set_bool("c", "true"),
+                            TreeDef::new_with_children(
+                                "if",
+                                vec![
+                                    TreeDef::new_with_children(
+                                        "Fallback",
+                                        vec![
+                                            TreeDef::new_with_child("Inverter", TreeDef::new("a")),
+                                            TreeDef::new_with_children(
+                                                "Sequence",
+                                                vec![TreeDef::new("b"), TreeDef::new("c")]
+                                            )
+                                        ]
+                                    ),
+                                    TreeDef::new("Sequence")
+                                ]
+                            )
+                        ],
+                        vec![
+                            VarDef {
+                                name: "a",
+                                init: Some("false"),
+                            },
+                            VarDef {
+                                name: "b",
+                                init: Some("true"),
+                            },
+                            VarDef {
+                                name: "c",
+                                init: Some("true"),
+                            }
+                        ],
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_cond_paren() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = false
+    var b = true
+    var c = true
+    if ((!a || b) && c) {}
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![
+                            set_bool("a", "false"),
+                            set_bool("b", "true"),
+                            set_bool("c", "true"),
+                            TreeDef::new_with_children(
+                                "if",
+                                vec![
+                                    TreeDef::new_with_children(
+                                        "Sequence",
+                                        vec![
+                                            TreeDef::new_with_children(
+                                                "Fallback",
+                                                vec![
+                                                    TreeDef::new_with_child(
+                                                        "Inverter",
+                                                        TreeDef::new("a")
+                                                    ),
+                                                    TreeDef::new("b")
+                                                ]
+                                            ),
+                                            TreeDef::new("c")
+                                        ]
+                                    ),
+                                    TreeDef::new("Sequence")
+                                ]
+                            )
+                        ],
+                        vec![
+                            VarDef {
+                                name: "a",
+                                init: Some("false"),
+                            },
+                            VarDef {
+                                name: "b",
+                                init: Some("true"),
+                            },
+                            VarDef {
+                                name: "c",
+                                init: Some("true"),
+                            }
+                        ],
+                    )
+                )]
+            }
+        ))
+    );
+}
+
+#[test]
+fn test_oneliner() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = (!a || b) && c
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children(
+                        "Sequence",
+                        vec![
+                            TreeDef::new_with_children(
+                                "Fallback",
+                                vec![
+                                    TreeDef::new_with_child("Inverter", TreeDef::new("a")),
+                                    TreeDef::new("b")
+                                ]
+                            ),
+                            TreeDef::new("c")
+                        ]
                     )
                 )]
             }
