@@ -344,7 +344,10 @@ fn parse_conditional_factor(i: &str) -> IResult<&str, TreeDef> {
 
         Ok((i, TreeDef::new_with_child("Inverter", res)))
     } else {
-        parse_tree_node(i)
+        alt((
+            delimited(open_paren, parse_conditional_expr, close_paren),
+            parse_tree_node,
+        ))(i)
     }
 }
 

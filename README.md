@@ -498,6 +498,14 @@ tree main = Sequence {
 }
 ```
 
+Parentheses can be used to group operators.
+
+```raw
+tree main = Sequence {
+    (!a || b) && c
+}
+```
+
 `if` node without else clause is semantically the same as a Sequence node like below,
 but Sequence or Fallback nodes cannot represent `else` clause easily.
 

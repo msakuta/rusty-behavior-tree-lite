@@ -807,3 +807,72 @@ tree main = Sequence {
         ))
     );
 }
+
+#[test]
+fn test_cond_paren() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = false
+    var b = true
+    var c = true
+    if ((!a || b) && c) {}
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![
+                            set_bool("a", "false"),
+                            set_bool("b", "true"),
+                            set_bool("c", "true"),
+                            TreeDef::new_with_children(
+                                "if",
+                                vec![
+                                    TreeDef::new_with_children(
+                                        "Sequence",
+                                        vec![
+                                            TreeDef::new_with_children(
+                                                "Fallback",
+                                                vec![
+                                                    TreeDef::new_with_child(
+                                                        "Inverter",
+                                                        TreeDef::new("a")
+                                                    ),
+                                                    TreeDef::new("b")
+                                                ]
+                                            ),
+                                            TreeDef::new("c")
+                                        ]
+                                    ),
+                                    TreeDef::new("Sequence")
+                                ]
+                            )
+                        ],
+                        vec![
+                            VarDef {
+                                name: "a",
+                                init: Some("false"),
+                            },
+                            VarDef {
+                                name: "b",
+                                init: Some("true"),
+                            },
+                            VarDef {
+                                name: "c",
+                                init: Some("true"),
+                            }
+                        ],
+                    )
+                )]
+            }
+        ))
+    );
+}
