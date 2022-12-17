@@ -876,3 +876,36 @@ tree main = Sequence {
         ))
     );
 }
+
+#[test]
+fn test_oneliner() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = (!a || b) && c
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children(
+                        "Sequence",
+                        vec![
+                            TreeDef::new_with_children(
+                                "Fallback",
+                                vec![
+                                    TreeDef::new_with_child("Inverter", TreeDef::new("a")),
+                                    TreeDef::new("b")
+                                ]
+                            ),
+                            TreeDef::new("c")
+                        ]
+                    )
+                )]
+            }
+        ))
+    );
+}
