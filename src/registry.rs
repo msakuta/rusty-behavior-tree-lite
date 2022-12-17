@@ -1,7 +1,8 @@
 use super::{
     nodes::{
-        FallbackNode, ForceFailureNode, ForceSuccessNode, InverterNode, IsTrueNode,
+        FallbackNode, ForceFailureNode, ForceSuccessNode, IfNode, InverterNode, IsTrueNode,
         ReactiveFallbackNode, ReactiveSequenceNode, RepeatNode, RetryNode, SequenceNode,
+        SetBoolNode,
     },
     BehaviorNode, Symbol,
 };
@@ -43,6 +44,8 @@ impl Default for Registry {
         ret.register("Repeat", boxify(|| RepeatNode::default()));
         ret.register("Retry", boxify(|| RetryNode::default()));
         ret.register("IsTrue", boxify(|| IsTrueNode));
+        ret.register("if", boxify(IfNode::default));
+        ret.register("SetBool", boxify(|| SetBoolNode));
         ret
     }
 }

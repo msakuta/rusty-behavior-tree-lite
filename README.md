@@ -298,6 +298,22 @@ If your `BehaviorNode::provided_ports` and the source file's direction arrow (`<
 let tree = load(&tree_source, &registry, check_ports)?;
 ```
 
+
+### Line comments
+
+You can put a line comment starting with a hash (`#`).
+
+```
+# This is a comment at the top level.
+
+tree main = Sequence { # This is a comment after opening brace.
+           # This is a comment in a whole line.
+    var a  # This is a comment after a variable declaration.
+    Yes    # This is a comment after a node.
+}          # This is a comment after a closing brace.
+```
+
+
 ### Node definition
 
 A node can be specified like below.
@@ -393,6 +409,164 @@ tree SubTree(in input, out output) = Sequence {
 ```
 
 
+### Conditional syntax
+
+Like a programming language, the format supports conditional syntax.
+
+```
+tree main = Sequence {
+    if (ConditionNode) {
+        Yes
+    }
+}
+```
+
+If the `ConditionNode` returns `Success`, the inner braces are ticked
+as a Sequence, otherwise it skips the nodes.
+
+It is not an `if` statement per se, because behavior tree does not have
+the concept of a statement.
+It is internally just a behavior node, having a special syntax for the
+ease of editing and understanding.
+
+The code above desugars into this:
+
+```
+tree main = Sequence {
+    if {
+        ConditionNode
+        Sequence {
+            Yes
+        }
+    }
+}
+```
+
+As you may expect, you can put `else` clause.
+
+```
+tree main = Sequence {
+    if (ConditionNode) {
+        Yes
+    } else {
+        No
+    }
+}
+```
+
+`if` is a built-in node type, which can take 2 or 3 child nodes.
+The first child is the condition, the second is the `then` clause, and
+the optional third child is the `else` clause.
+`then` and `else` clause are implicitly wrapped in a `Sequence`.
+
+The syntax also supports negation operator (`!`) in front of the condition node.
+This code below is
+
+```
+tree main = Sequence {
+    if (!ConditionNode) {
+        Yes
+    }
+}
+```
+
+equivalent to this one:
+
+```
+tree main = Sequence {
+    if (ConditionNode) {
+    } else {
+        Yes
+    }
+}
+```
+
+You can put logical operators (`&&` and `||`) like conditional expressions in programming languages.
+`&&` is just a shorthand for a Sequence node and `||` is a Fallback node.
+
+```raw
+tree main = Sequence {
+    if (!a || b && c) {}
+}
+```
+
+In fact, a child node is implicitly a logical expression, so you can write like this:
+
+```raw
+tree main = Sequence {
+    !a || b && c
+}
+```
+
+Parentheses can be used to group operators.
+
+```raw
+tree main = Sequence {
+    (!a || b) && c
+}
+```
+
+`if` node without else clause is semantically the same as a Sequence node like below,
+but Sequence or Fallback nodes cannot represent `else` clause easily.
+
+```
+tree main = Sequence {
+    Sequence {
+        ConditionNode
+        Sequence {
+            Yes
+        }
+    }
+}
+```
+
+
+### Blackboard variable declarations
+
+You can optionally declare and initialize a blackboard variable.
+It can be used as a node name, and its value is evaluated as a boolean.
+So, you can put the variable into a `if` condition.
+
+```
+tree main = Sequence {
+    var flag = true
+    if (flag) {
+        Yes
+    }
+}
+```
+
+Currently, only `true` or `false` is allowed as the initializer (the right hand side of `=`).
+
+The variable declaration with initialization will desugar into a `SetBool` node.
+A reference to a variable name will desugar into a `IsTrue` node.
+
+```
+tree main = Sequence {
+    SetBool (value <- "true", output -> flag)
+    if (IsTrue (input <- flag)) {
+        Yes
+    }
+}
+```
+
+However, it is necessary to declare the variable name in order to use it as a
+variable reference.
+For example, the code below will be a `load` error for `MissingNode`, even though
+the variable is set with `SetBool`.
+
+```
+tree main = Sequence {
+    SetBool (value <- "true", output -> flag)
+    if (flag) {
+        Yes
+    }
+}
+```
+
+This design is a step towards statically checked source code.
+
+
 ### Syntax specification
 
 Here is a pseudo-EBNF notation of the syntax.
@@ -410,7 +584,17 @@ port-def = ( "in" | "out" | "inout" ) tree-port-name
 
 tree-port-name = identifier
 
-node = node-name [ "(" port-list ")" ] [ "{" node* "}" ]
+node = if-syntax | conditional | var-def-syntax
+
+if-syntax = "if" "(" conditional ")"
+
+conditional-factor = "!" conditional-factor | node-syntax
+
+conditional-and =  conditional-factor | conditional "&&" conditional-factor
+
+conditional =  conditional-and | conditional "||" conditional-and
+
+node-syntax = node-name [ "(" port-list ")" ] [ "{" node* "}" ]
 
 port-list = port [ "," port-list ]
 
@@ -419,6 +603,10 @@ port = node-port-name ("<-" | "->" | "<->") blackboard-port-name
 node-port-name = identifier
 
 blackboard-port-name = identifier
+
+var-def-syntax = "var" identifier "=" initializer
+
+initializer = "true" | "false"
 ```
 
 ## TODO
@@ -430,4 +618,5 @@ blackboard-port-name = identifier
   * [x] Decorator nodes
 * [x] Performance friendly blackboard keys
 * [x] DSL for defining behavior tree structure
+  * [x] Programming language-like flow control syntax
 * [ ] Static type checking for behavior tree definition file

@@ -1,7 +1,11 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::nom_parser::{TreeDef, TreeSource};
-use crate::{error::LoadError, nodes::SubtreeNode, BBMap, BehaviorNode, PortSpec, Registry};
+use crate::{
+    error::LoadError,
+    nodes::{IsTrueNode, SubtreeNode, INPUT},
+    BBMap, BehaviorNode, PortSpec, PortType, Registry, Symbol,
+};
 
 /// Instantiate a behavior tree from a AST of a tree.
 ///
@@ -24,7 +28,16 @@ pub fn load(
         parent: None,
     };
 
-    load_recurse(&main.root, registry, tree_source, check_ports, &top)
+    let mut vars = HashSet::new();
+
+    load_recurse(
+        &main.root,
+        registry,
+        tree_source,
+        check_ports,
+        &top,
+        &mut vars,
+    )
 }
 
 /// A mechanism to detect infinite recursion. It is a linked list in call stack.
@@ -80,6 +93,7 @@ fn load_recurse(
     tree_source: &TreeSource,
     check_ports: bool,
     parent_stack: &TreeStack,
+    vars: &mut HashSet<Symbol>,
 ) -> Result<Box<dyn BehaviorNode>, LoadError> {
     let mut ret = if let Some(ret) = registry.build(parent.ty) {
         ret
@@ -100,8 +114,19 @@ fn load_recurse(
             name: parent.ty,
             parent: Some(parent_stack),
         };
-        let loaded_subtree =
-            load_recurse(&tree.root, registry, tree_source, check_ports, &tree_stack)?;
+
+        // A subtree introduces a new namespace, so the parent tree variables won't affect
+        // the decision of variable or node.
+        let mut vars = HashSet::new();
+
+        let loaded_subtree = load_recurse(
+            &tree.root,
+            registry,
+            tree_source,
+            check_ports,
+            &tree_stack,
+            &mut vars,
+        )?;
         Box::new(SubtreeNode::new(
             loaded_subtree,
             HashMap::new(),
@@ -115,196 +140,78 @@ fn load_recurse(
         ))
     };
 
+    // "Hoist" declarations
+    for var_def in &parent.vars {
+        vars.insert(var_def.name.into());
+    }
+
     for child in &parent.children {
-        let child_node = load_recurse(child, registry, tree_source, check_ports, parent_stack)?;
-        let provided_ports = child_node.provided_ports();
-        let mut bbmap = BBMap::new();
-        for entry in child.port_maps.iter() {
-            if check_ports {
-                if let Some(port) = provided_ports.iter().find(|p| p.key == entry.node_port) {
-                    if port.ty != entry.ty {
-                        return Err(LoadError::PortIOUnmatch {
+        let mut new_node = if child.port_maps.is_empty() && child.children.is_empty() {
+            eprintln!("parent: {} vars: {:?}", parent.ty, vars);
+            if vars.contains(&child.ty.into()) {
+                let mut bbmap = BBMap::new();
+                bbmap.insert(
+                    *INPUT,
+                    crate::BlackboardValue::Ref(child.ty.into(), PortType::Input),
+                );
+                Some((Box::new(IsTrueNode) as Box<dyn BehaviorNode>, bbmap))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if new_node.is_none() {
+            let child_node = load_recurse(
+                child,
+                registry,
+                tree_source,
+                check_ports,
+                parent_stack,
+                vars,
+            )?;
+            let provided_ports = child_node.provided_ports();
+            let mut bbmap = BBMap::new();
+            for entry in child.port_maps.iter() {
+                if check_ports {
+                    if let Some(port) = provided_ports.iter().find(|p| p.key == entry.node_port) {
+                        if port.ty != entry.ty {
+                            return Err(LoadError::PortIOUnmatch {
+                                node: child.ty.to_owned(),
+                                port: entry.node_port.to_owned(),
+                            });
+                        }
+                    } else {
+                        return Err(LoadError::PortUnmatch {
                             node: child.ty.to_owned(),
                             port: entry.node_port.to_owned(),
                         });
                     }
-                } else {
-                    return Err(LoadError::PortUnmatch {
-                        node: child.ty.to_owned(),
-                        port: entry.node_port.to_owned(),
-                    });
                 }
+                bbmap.insert(
+                    entry.node_port.into(),
+                    match entry.blackboard_value {
+                        super::nom_parser::BlackboardValue::Ref(ref value) => {
+                            crate::BlackboardValue::Ref(value.into(), entry.ty)
+                        }
+                        super::nom_parser::BlackboardValue::Literal(ref value) => {
+                            crate::BlackboardValue::Literal(value.clone())
+                        }
+                    },
+                );
             }
-            bbmap.insert(
-                entry.node_port.into(),
-                match entry.blackboard_value {
-                    super::nom_parser::BlackboardValue::Ref(ref value) => {
-                        crate::BlackboardValue::Ref(value.into(), entry.ty)
-                    }
-                    super::nom_parser::BlackboardValue::Literal(ref value) => {
-                        crate::BlackboardValue::Literal(value.clone())
-                    }
-                },
-            );
+            new_node = Some((child_node, bbmap));
         }
-        ret.add_child(child_node, bbmap)
-            .map_err(|e| LoadError::AddChildError(e, parent.ty.to_string()))?;
+
+        if let Some((new_node, bbmap)) = new_node {
+            ret.add_child(new_node, bbmap)
+                .map_err(|e| LoadError::AddChildError(e, parent.ty.to_string()))?;
+        }
     }
 
     Ok(ret)
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-    use crate::{boxify, error::LoadError, BehaviorResult, Context};
-
-    struct PrintNode;
-
-    impl BehaviorNode for PrintNode {
-        fn tick(
-            &mut self,
-            arg: crate::BehaviorCallback,
-            _ctx: &mut crate::Context,
-        ) -> crate::BehaviorResult {
-            arg(&42);
-            BehaviorResult::Success
-        }
-    }
-
-    #[test]
-    fn test_subtree() {
-        let tree = r#"
-    tree main = Sequence {
-        sub
-    }
-
-    tree sub = Fallback {
-        PrintNode
-    }
-        "#;
-
-        let (_, tree_source) = crate::parse_file(tree).unwrap();
-        let mut registry = Registry::default();
-        registry.register("PrintNode", boxify(|| PrintNode));
-        let mut tree = load(&tree_source, &registry, true).unwrap();
-
-        let mut values = vec![];
-        let result = tree.tick(
-            &mut |val| {
-                val.downcast_ref::<i32>().map(|val| values.push(*val));
-                None
-            },
-            &mut Context::default(),
-        );
-        assert_eq!(result, BehaviorResult::Success);
-        assert_eq!(values, vec![42]);
-    }
-
-    struct SendToArg;
-
-    impl BehaviorNode for SendToArg {
-        fn provided_ports(&self) -> Vec<PortSpec> {
-            vec![PortSpec::new_in("input")]
-        }
-
-        fn tick(&mut self, arg: crate::BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-            let input = ctx.get_parse::<i32>("input").unwrap();
-            arg(&input);
-            BehaviorResult::Success
-        }
-    }
-
-    #[test]
-    fn test_subtree_map() {
-        let tree = r#"
-tree main = Sequence {
-    sub(input <- "96")
-}
-
-tree sub(in input, out output) = Fallback {
-    SendToArg (input <- input)
-}
-"#;
-        let (_, tree_source) = crate::parse_file(tree).unwrap();
-        let mut registry = Registry::default();
-        registry.register("SendToArg", boxify(|| SendToArg));
-        let mut tree = load(&tree_source, &registry, true).unwrap();
-
-        let mut values = vec![];
-        let result = tree.tick(
-            &mut |val| {
-                val.downcast_ref::<i32>().map(|val| values.push(*val));
-                None
-            },
-            &mut Context::default(),
-        );
-        assert_eq!(result, BehaviorResult::Success);
-        assert_eq!(values, vec![96]);
-    }
-
-    struct DoubleNode;
-
-    impl BehaviorNode for DoubleNode {
-        fn provided_ports(&self) -> Vec<PortSpec> {
-            vec![PortSpec::new_in("input"), PortSpec::new_out("output")]
-        }
-
-        fn tick(&mut self, _arg: crate::BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-            let input = ctx.get_parse::<i32>("input").unwrap();
-            ctx.set("output", input * 2);
-            BehaviorResult::Success
-        }
-    }
-
-    #[test]
-    fn test_subtree_output() {
-        let tree = r#"
-tree main = Sequence {
-    sub(input <- "42", output -> doubled)
-    SendToArg (input <- doubled)
-}
-
-tree sub(in input, out output) = Fallback {
-    Double (input <- input, output -> output)
-}
-"#;
-        let (_, tree_source) = crate::parse_file(tree).unwrap();
-        let mut registry = Registry::default();
-        registry.register("SendToArg", boxify(|| SendToArg));
-        registry.register("Double", boxify(|| DoubleNode));
-        let mut tree = load(&tree_source, &registry, true).unwrap();
-
-        let mut values = vec![];
-        let result = tree.tick(
-            &mut |val| {
-                val.downcast_ref::<i32>().map(|val| values.push(*val));
-                None
-            },
-            &mut Context::default(),
-        );
-        assert_eq!(result, BehaviorResult::Success);
-        assert_eq!(values, vec![84]);
-    }
-
-    #[test]
-    fn recurse() {
-        let (_, st) = crate::parse_file(
-            "
-tree main = Sequence {
-    Sub
-}
-
-tree Sub = Sequence {
-    Sub
-}
-        ",
-        )
-        .unwrap();
-
-        assert!(matches!(
-            load(&st, &Registry::default(), false),
-            Err(LoadError::InfiniteRecursion { .. })
-        ));
-    }
-}
+mod test;
