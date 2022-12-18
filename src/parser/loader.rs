@@ -147,7 +147,6 @@ fn load_recurse(
 
     for child in &parent.children {
         let mut new_node = if child.port_maps.is_empty() && child.children.is_empty() {
-            eprintln!("parent: {} vars: {:?}", parent.ty, vars);
             if vars.contains(&child.ty.into()) {
                 let mut bbmap = BBMap::new();
                 bbmap.insert(
