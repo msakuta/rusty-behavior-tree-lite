@@ -59,7 +59,7 @@
 		"arrows": {
 			"patterns": [{
 				"name": "keyword.operator.arrow.rustybtlite",
-				"match": "(->|<-)"
+				"match": "(->|<-|<->)"
 			}]
 		},
 		"identifiers": {
