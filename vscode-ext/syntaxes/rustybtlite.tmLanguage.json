@@ -19,6 +19,9 @@
 		},
 		{
 			"include": "#identifiers"
+		},
+		{
+			"include": "#operators"
 		}
 	],
 	"repository": {
@@ -66,6 +69,12 @@
 			"patterns": [{
 				"name": "variable.other.rustybtlite",
 				"match": "\\w+"
+			}]
+		},
+		"operators": {
+			"patterns": [{
+				"name": "keyword.operator.logical.rustybtlite",
+				"match": "(!|&&|\\|\\|)"
 			}]
 		}
 	},
