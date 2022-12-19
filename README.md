@@ -8,8 +8,7 @@ An experimental Rust crate for minimal behavior tree implementation
 This is a sister project of [tiny-behavior-tree](https://github.com/msakuta/rusty_tiny_behavior_tree) which in turn inspired by [BehaviorTreeCPP](https://github.com/BehaviorTree/BehaviorTree.CPP.git).
 
 While tiny-behavior-tree aims for more innovative design and experimental features, this crate aims for more traditional behavior tree implementation.
-However, we are not going to implement advanced features such as asynchronous nodes or coroutines.
-My goal is to make a crate lightweight enough to use in WebAssembly.
+The goal is to make a crate lightweight enough to use in WebAssembly.
 
 ## The difference from tiny-behavior-tree
 
