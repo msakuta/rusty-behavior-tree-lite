@@ -478,6 +478,7 @@ impl BehaviorNode for IsTrueNode {
 #[derive(Default)]
 pub struct IfNode {
     children: Vec<BehaviorNodeContainer>,
+    condition_result: Option<BehaviorResult>,
 }
 
 impl BehaviorNode for IfNode {
@@ -489,13 +490,17 @@ impl BehaviorNode for IfNode {
             res
         };
 
-        let condition_result = self
-            .children
-            .first_mut()
-            .map(&mut ticker)
-            .unwrap_or(BehaviorResult::Fail);
+        let condition_result = self.condition_result.unwrap_or_else(|| {
+            self.children
+                .first_mut()
+                .map(&mut ticker)
+                .unwrap_or(BehaviorResult::Fail)
+        });
 
-        match condition_result {
+        // Remember the last conditional result in case the child node returns Running
+        self.condition_result = Some(condition_result);
+
+        let branch_result = match condition_result {
             BehaviorResult::Success => self
                 .children
                 .get_mut(1)
@@ -509,7 +514,15 @@ impl BehaviorNode for IfNode {
                     .unwrap_or(BehaviorResult::Success)
             }
             BehaviorResult::Running => BehaviorResult::Running,
+        };
+
+        // Clear the last state if either true or false branch has succeeded. This node should
+        // evaluate condition again if it's ticked later.
+        if !matches!(branch_result, BehaviorResult::Running) {
+            self.condition_result = None;
         }
+
+        branch_result
     }
 
     fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
