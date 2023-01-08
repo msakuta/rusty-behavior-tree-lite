@@ -745,8 +745,8 @@ impl From<&str> for BlackboardValue {
 /// The third sect in the society is copy-on-write reference, which is what `Rc` does.
 pub type Blackboard = HashMap<Symbol, Rc<dyn Any>>;
 pub type BBMap = HashMap<Symbol, BlackboardValue>;
-pub type BehaviorCallback<'a, P: ContextProvider> =
-    &'a mut dyn FnMut(&<P as ContextProvider>::Send) -> Option<<P as ContextProvider>::Recv>;
+pub type BehaviorCallback<'a, P> =
+    &'a mut dyn FnMut(&<P as ContextProvider>::Send) -> <P as ContextProvider>::Recv;
 
 pub trait ContextProvider: 'static {
     type Send;

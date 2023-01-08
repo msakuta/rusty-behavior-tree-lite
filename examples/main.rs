@@ -2,7 +2,7 @@ use ::behavior_tree_lite::{
     hash_map, BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context, Lazy,
     SequenceNode, Symbol,
 };
-use behavior_tree_lite::PortType;
+use behavior_tree_lite::{ContextProvider, PortType};
 
 #[derive(Clone, Debug)]
 struct Arm {
@@ -15,10 +15,17 @@ struct Body {
     right_arm: Arm,
 }
 
+struct NullProvider;
+
+impl ContextProvider for NullProvider {
+    type Send = ();
+    type Recv = ();
+}
+
 struct PrintArmNode;
 
-impl BehaviorNode for PrintArmNode {
-    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+impl BehaviorNode<NullProvider> for PrintArmNode {
+    fn tick(&mut self, _arg: BehaviorCallback<NullProvider>, ctx: &mut Context) -> BehaviorResult {
         static ARM_SYM: Lazy<Symbol> = Lazy::new(|| "arm".into());
         if let Some(arm) = ctx.get::<Arm>(*ARM_SYM) {
             println!("PrintArmNode: {}", arm.name);
@@ -29,8 +36,8 @@ impl BehaviorNode for PrintArmNode {
 
 struct PrintBodyNode;
 
-impl BehaviorNode for PrintBodyNode {
-    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+impl BehaviorNode<NullProvider> for PrintBodyNode {
+    fn tick(&mut self, _arg: BehaviorCallback<NullProvider>, ctx: &mut Context) -> BehaviorResult {
         static BODY_SYM: Lazy<Symbol> = Lazy::new(|| "body".into());
         static LEFT_ARM_SYM: Lazy<Symbol> = Lazy::new(|| "left_arm".into());
         static RIGHT_ARM_SYM: Lazy<Symbol> = Lazy::new(|| "right_arm".into());
@@ -81,7 +88,7 @@ fn main() {
 
     root.add_child(Box::new(print_arms), hash_map!()).unwrap();
 
-    root.tick(&mut |_| None, &mut ctx);
+    root.tick(&mut |_| (), &mut ctx);
 
     println!("Total symbols: {}", Symbol::count());
 }

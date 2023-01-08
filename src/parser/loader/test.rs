@@ -1,12 +1,26 @@
 use super::*;
 use crate::{boxify, error::LoadError, BehaviorResult, Context};
 
+struct NullProvider;
+
+impl ContextProvider for NullProvider {
+    type Send = ();
+    type Recv = ();
+}
+
+struct SendToArgProvider;
+
+impl ContextProvider for SendToArgProvider {
+    type Send = i32;
+    type Recv = ();
+}
+
 struct PrintNode;
 
-impl BehaviorNode for PrintNode {
+impl BehaviorNode<SendToArgProvider> for PrintNode {
     fn tick(
         &mut self,
-        arg: crate::BehaviorCallback,
+        arg: crate::BehaviorCallback<SendToArgProvider>,
         _ctx: &mut crate::Context,
     ) -> crate::BehaviorResult {
         arg(&42);
@@ -32,25 +46,23 @@ tree sub = Fallback {
     let mut tree = load(&tree_source, &registry, true).unwrap();
 
     let mut values = vec![];
-    let result = tree.tick(
-        &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
-            None
-        },
-        &mut Context::default(),
-    );
+    let result = tree.tick(&mut |val| values.push(*val), &mut Context::default());
     assert_eq!(result, BehaviorResult::Success);
     assert_eq!(values, vec![42]);
 }
 
 struct SendToArg;
 
-impl BehaviorNode for SendToArg {
+impl BehaviorNode<SendToArgProvider> for SendToArg {
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![PortSpec::new_in("input")]
     }
 
-    fn tick(&mut self, arg: crate::BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+    fn tick(
+        &mut self,
+        arg: crate::BehaviorCallback<SendToArgProvider>,
+        ctx: &mut Context,
+    ) -> BehaviorResult {
         let input = ctx.get_parse::<i32>("input").unwrap();
         arg(&input);
         BehaviorResult::Success
@@ -74,25 +86,22 @@ SendToArg (input <- input)
     let mut tree = load(&tree_source, &registry, true).unwrap();
 
     let mut values = vec![];
-    let result = tree.tick(
-        &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
-            None
-        },
-        &mut Context::default(),
-    );
+    let result = tree.tick(&mut |val| values.push(*val), &mut Context::default());
     assert_eq!(result, BehaviorResult::Success);
     assert_eq!(values, vec![96]);
 }
 
 struct DoubleNode;
 
-impl BehaviorNode for DoubleNode {
+impl<P> BehaviorNode<P> for DoubleNode
+where
+    P: ContextProvider,
+{
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![PortSpec::new_in("input"), PortSpec::new_out("output")]
     }
 
-    fn tick(&mut self, _arg: crate::BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, _arg: crate::BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         let input = ctx.get_parse::<i32>("input").unwrap();
         ctx.set("output", input * 2);
         BehaviorResult::Success
@@ -120,8 +129,7 @@ Double (input <- input, output -> output)
     let mut values = vec![];
     let result = tree.tick(
         &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
-            None
+            values.push(*val);
         },
         &mut Context::default(),
     );
@@ -145,19 +153,22 @@ Sub
     .unwrap();
 
     assert!(matches!(
-        load(&st, &Registry::default(), false),
+        load(&st, &Registry::<NullProvider>::default(), false),
         Err(LoadError::InfiniteRecursion { .. })
     ));
 }
 
 struct ConditionNode;
 
-impl BehaviorNode for ConditionNode {
+impl<P> BehaviorNode<P> for ConditionNode
+where
+    P: ContextProvider,
+{
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![PortSpec::new_in("input")]
     }
 
-    fn tick(&mut self, _arg: crate::BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, _arg: crate::BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         if ctx.get_parse::<bool>("input").unwrap_or(true) {
             BehaviorResult::Success
         } else {
@@ -185,13 +196,7 @@ tree main = Sequence {
     let mut tree = load(&tree_source, &registry, true).unwrap();
 
     let mut values = vec![];
-    let result = tree.tick(
-        &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
-            None
-        },
-        &mut Context::default(),
-    );
+    let result = tree.tick(&mut |val| values.push(*val), &mut Context::default());
     assert_eq!(result, BehaviorResult::Success);
     assert_eq!(values, vec![42]);
 }
@@ -215,13 +220,7 @@ tree main = Sequence {
     let mut tree = load(&tree_source, &registry, true).unwrap();
 
     let mut values = vec![];
-    let result = tree.tick(
-        &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
-            None
-        },
-        &mut Context::default(),
-    );
+    let result = tree.tick(&mut |val| values.push(*val), &mut Context::default());
     assert_eq!(result, BehaviorResult::Success);
     assert!(values.is_empty());
 }
@@ -247,13 +246,7 @@ tree main = Sequence {
     let mut tree = load(&tree_source, &registry, true).unwrap();
 
     let mut values = vec![];
-    let result = tree.tick(
-        &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
-            None
-        },
-        &mut Context::default(),
-    );
+    let result = tree.tick(&mut |val| values.push(*val), &mut Context::default());
     assert_eq!(result, BehaviorResult::Success);
     assert_eq!(values, vec![96]);
 }
@@ -277,13 +270,7 @@ tree main = Sequence {
     let mut tree = load(&tree_source, &registry, true).unwrap();
 
     let mut values = vec![];
-    let result = tree.tick(
-        &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
-            None
-        },
-        &mut Context::default(),
-    );
+    let result = tree.tick(&mut |val| values.push(*val), &mut Context::default());
     assert_eq!(result, BehaviorResult::Success);
     assert!(values.is_empty());
 }
@@ -309,13 +296,7 @@ tree main = Sequence {
     let mut tree = load(&tree_source, &registry, true).unwrap();
 
     let mut values = vec![];
-    let result = tree.tick(
-        &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
-            None
-        },
-        &mut Context::default(),
-    );
+    let result = tree.tick(&mut |val| values.push(*val), &mut Context::default());
     assert_eq!(result, BehaviorResult::Success);
     assert_eq!(values, vec![42]);
 }
@@ -340,13 +321,7 @@ tree main = Sequence {
     let mut tree = load(&tree_source, &registry, true).unwrap();
 
     let mut values = vec![];
-    let result = tree.tick(
-        &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
-            None
-        },
-        &mut Context::default(),
-    );
+    let result = tree.tick(&mut |val| values.push(*val), &mut Context::default());
     assert_eq!(result, BehaviorResult::Success);
     assert!(values.is_empty());
 }
@@ -371,13 +346,7 @@ tree main = Sequence {
     let mut tree = load(&tree_source, &registry, true).unwrap();
 
     let mut values = vec![];
-    let result = tree.tick(
-        &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
-            None
-        },
-        &mut Context::default(),
-    );
+    let result = tree.tick(&mut |val| values.push(*val), &mut Context::default());
     assert_eq!(result, BehaviorResult::Success);
     assert_eq!(values, vec![42]);
 }
@@ -402,13 +371,7 @@ tree main = Sequence {
     let mut tree = load(&tree_source, &registry, true).unwrap();
 
     let mut values = vec![];
-    let result = tree.tick(
-        &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
-            None
-        },
-        &mut Context::default(),
-    );
+    let result = tree.tick(&mut |val| values.push(*val), &mut Context::default());
     assert_eq!(result, BehaviorResult::Success);
     assert_eq!(values, vec![42]);
 }
@@ -426,7 +389,7 @@ tree main = Sequence {
     )
     .unwrap();
 
-    let registry = Registry::default();
+    let registry = Registry::<NullProvider>::default();
     let res = load(&tree_source, &registry, true);
     if let Err(err) = res {
         assert_eq!(err, LoadError::MissingNode("flag".to_owned()));

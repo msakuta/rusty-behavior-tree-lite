@@ -2,7 +2,7 @@ use ::behavior_tree_lite::{
     boxify, load, parse_file, BehaviorCallback, BehaviorNode, BehaviorResult, Context, Lazy,
     Registry, Symbol,
 };
-use behavior_tree_lite::PortSpec;
+use behavior_tree_lite::{ContextProvider, PortSpec};
 
 use std::fs;
 
@@ -17,14 +17,21 @@ struct Body {
     right_arm: Arm,
 }
 
+struct NullProvider;
+
+impl ContextProvider for NullProvider {
+    type Send = ();
+    type Recv = ();
+}
+
 struct PrintArmNode;
 
-impl BehaviorNode for PrintArmNode {
+impl BehaviorNode<NullProvider> for PrintArmNode {
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![PortSpec::new_in("arm")]
     }
 
-    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, _arg: BehaviorCallback<NullProvider>, ctx: &mut Context) -> BehaviorResult {
         static ARM_SYM: Lazy<Symbol> = Lazy::new(|| "arm".into());
         if let Some(arm) = ctx.get::<Arm>(*ARM_SYM) {
             println!("PrintArmNode: {}", arm.name);
@@ -35,12 +42,12 @@ impl BehaviorNode for PrintArmNode {
 
 struct PrintStringNode;
 
-impl BehaviorNode for PrintStringNode {
+impl BehaviorNode<NullProvider> for PrintStringNode {
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![PortSpec::new_in("input")]
     }
 
-    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, _arg: BehaviorCallback<NullProvider>, ctx: &mut Context) -> BehaviorResult {
         static INPUT: Lazy<Symbol> = Lazy::new(|| "input".into());
         if let Some(s) = ctx.get::<String>(*INPUT) {
             println!("PrintStringNode: {}", s);
@@ -53,7 +60,7 @@ impl BehaviorNode for PrintStringNode {
 
 struct PrintBodyNode;
 
-impl BehaviorNode for PrintBodyNode {
+impl BehaviorNode<NullProvider> for PrintBodyNode {
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![
             PortSpec::new_in("body"),
@@ -62,7 +69,7 @@ impl BehaviorNode for PrintBodyNode {
         ]
     }
 
-    fn tick(&mut self, _: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, _: BehaviorCallback<NullProvider>, ctx: &mut Context) -> BehaviorResult {
         static BODY_SYM: Lazy<Symbol> = Lazy::new(|| "body".into());
         static LEFT_ARM_SYM: Lazy<Symbol> = Lazy::new(|| "left_arm".into());
         static RIGHT_ARM_SYM: Lazy<Symbol> = Lazy::new(|| "right_arm".into());
@@ -107,7 +114,7 @@ fn main() -> anyhow::Result<()> {
 
     let mut root =
         load(&tree_source, &registry, true).map_err(|e| anyhow::format_err!("parse error: {e}"))?;
-    let mut null = |_: &dyn std::any::Any| -> Option<Box<dyn std::any::Any>> { None };
+    let mut null = |_: &()| ();
     println!("root: {:?}", root.tick(&mut null, &mut ctx));
 
     println!("Total symbols: {}", Symbol::count());
