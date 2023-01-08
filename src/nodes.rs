@@ -1,20 +1,23 @@
 use crate::{
     error::{AddChildError, AddChildResult},
     BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Blackboard,
-    Context, Lazy, PortSpec, PortType, Symbol,
+    Context, ContextProvider, Lazy, PortSpec, PortType, Symbol,
 };
 
 /// SubtreeNode is a container for a subtree, introducing a local namescope of blackboard variables.
-pub struct SubtreeNode {
-    child: BehaviorNodeContainer,
+pub struct SubtreeNode<P> {
+    child: BehaviorNodeContainer<P>,
     /// Blackboard variables needs to be a part of the node payload
     blackboard: Blackboard,
     params: Vec<PortSpec>,
 }
 
-impl SubtreeNode {
+impl<P> SubtreeNode<P>
+where
+    P: ContextProvider,
+{
     pub fn new(
-        child: Box<dyn BehaviorNode>,
+        child: Box<dyn BehaviorNode<P>>,
         blackboard: Blackboard,
         params: Vec<PortSpec>,
     ) -> Self {
@@ -29,12 +32,15 @@ impl SubtreeNode {
     }
 }
 
-impl BehaviorNode for SubtreeNode {
+impl<P> BehaviorNode<P> for SubtreeNode<P>
+where
+    P: ContextProvider,
+{
     fn provided_ports(&self) -> Vec<PortSpec> {
         self.params.clone()
     }
 
-    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         for param in self
             .params
             .iter()
@@ -65,7 +71,11 @@ impl BehaviorNode for SubtreeNode {
         res
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+    fn add_child(
+        &mut self,
+        node: Box<dyn BehaviorNode<P>>,
+        blackboard_map: BBMap,
+    ) -> AddChildResult {
         self.child = BehaviorNodeContainer {
             node,
             blackboard_map,
@@ -74,12 +84,15 @@ impl BehaviorNode for SubtreeNode {
     }
 }
 
-pub struct SequenceNode {
-    children: Vec<BehaviorNodeContainer>,
+pub struct SequenceNode<P: ContextProvider> {
+    children: Vec<BehaviorNodeContainer<P>>,
     current_child: Option<usize>,
 }
 
-impl Default for SequenceNode {
+impl<P> Default for SequenceNode<P>
+where
+    P: ContextProvider,
+{
     fn default() -> Self {
         Self {
             children: vec![],
@@ -88,8 +101,11 @@ impl Default for SequenceNode {
     }
 }
 
-impl BehaviorNode for SequenceNode {
-    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+impl<P> BehaviorNode<P> for SequenceNode<P>
+where
+    P: ContextProvider,
+{
+    fn tick(&mut self, arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         let from = self.current_child.unwrap_or(0);
         for (i, node) in self.children[from..].iter_mut().enumerate() {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
@@ -111,7 +127,11 @@ impl BehaviorNode for SequenceNode {
         BehaviorResult::Success
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+    fn add_child(
+        &mut self,
+        node: Box<dyn BehaviorNode<P>>,
+        blackboard_map: BBMap,
+    ) -> AddChildResult {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,
@@ -120,18 +140,21 @@ impl BehaviorNode for SequenceNode {
     }
 }
 
-pub struct ReactiveSequenceNode {
-    children: Vec<BehaviorNodeContainer>,
+pub struct ReactiveSequenceNode<P> {
+    children: Vec<BehaviorNodeContainer<P>>,
 }
 
-impl Default for ReactiveSequenceNode {
+impl<P> Default for ReactiveSequenceNode<P> {
     fn default() -> Self {
         Self { children: vec![] }
     }
 }
 
-impl BehaviorNode for ReactiveSequenceNode {
-    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+impl<P> BehaviorNode<P> for ReactiveSequenceNode<P>
+where
+    P: ContextProvider,
+{
+    fn tick(&mut self, arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         for node in &mut self.children {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
             match node.node.tick(arg, ctx) {
@@ -150,7 +173,11 @@ impl BehaviorNode for ReactiveSequenceNode {
         BehaviorResult::Success
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+    fn add_child(
+        &mut self,
+        node: Box<dyn BehaviorNode<P>>,
+        blackboard_map: BBMap,
+    ) -> AddChildResult {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,
@@ -159,12 +186,12 @@ impl BehaviorNode for ReactiveSequenceNode {
     }
 }
 
-pub struct FallbackNode {
-    children: Vec<BehaviorNodeContainer>,
+pub struct FallbackNode<P> {
+    children: Vec<BehaviorNodeContainer<P>>,
     current_child: Option<usize>,
 }
 
-impl Default for FallbackNode {
+impl<P> Default for FallbackNode<P> {
     fn default() -> Self {
         Self {
             children: vec![],
@@ -173,8 +200,11 @@ impl Default for FallbackNode {
     }
 }
 
-impl BehaviorNode for FallbackNode {
-    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+impl<P> BehaviorNode<P> for FallbackNode<P>
+where
+    P: ContextProvider,
+{
+    fn tick(&mut self, arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         let from = self.current_child.unwrap_or(0);
         for (i, node) in self.children[from..].iter_mut().enumerate() {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
@@ -196,7 +226,11 @@ impl BehaviorNode for FallbackNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+    fn add_child(
+        &mut self,
+        node: Box<dyn BehaviorNode<P>>,
+        blackboard_map: BBMap,
+    ) -> AddChildResult {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,
@@ -205,18 +239,21 @@ impl BehaviorNode for FallbackNode {
     }
 }
 
-pub struct ReactiveFallbackNode {
-    children: Vec<BehaviorNodeContainer>,
+pub struct ReactiveFallbackNode<P> {
+    children: Vec<BehaviorNodeContainer<P>>,
 }
 
-impl Default for ReactiveFallbackNode {
+impl<P> Default for ReactiveFallbackNode<P> {
     fn default() -> Self {
         Self { children: vec![] }
     }
 }
 
-impl BehaviorNode for ReactiveFallbackNode {
-    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+impl<P> BehaviorNode<P> for ReactiveFallbackNode<P>
+where
+    P: ContextProvider,
+{
+    fn tick(&mut self, arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         for node in &mut self.children {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
             match node.node.tick(arg, ctx) {
@@ -235,7 +272,11 @@ impl BehaviorNode for ReactiveFallbackNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+    fn add_child(
+        &mut self,
+        node: Box<dyn BehaviorNode<P>>,
+        blackboard_map: BBMap,
+    ) -> AddChildResult {
         self.children.push(BehaviorNodeContainer {
             node,
             blackboard_map,
@@ -244,11 +285,24 @@ impl BehaviorNode for ReactiveFallbackNode {
     }
 }
 
-#[derive(Default)]
-pub struct ForceSuccessNode(Option<BehaviorNodeContainer>);
+pub struct ForceSuccessNode<P>(Option<BehaviorNodeContainer<P>>)
+where
+    P: ContextProvider;
 
-impl BehaviorNode for ForceSuccessNode {
-    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+impl<P> Default for ForceSuccessNode<P>
+where
+    P: ContextProvider,
+{
+    fn default() -> Self {
+        Self(None)
+    }
+}
+
+impl<P> BehaviorNode<P> for ForceSuccessNode<P>
+where
+    P: ContextProvider,
+{
+    fn tick(&mut self, arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         if let Some(ref mut node) = self.0 {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
             if let BehaviorResult::Running = node.node.tick(arg, ctx) {
@@ -262,7 +316,11 @@ impl BehaviorNode for ForceSuccessNode {
         }
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+    fn add_child(
+        &mut self,
+        node: Box<dyn BehaviorNode<P>>,
+        blackboard_map: BBMap,
+    ) -> AddChildResult {
         if self.0.is_none() {
             self.0 = Some(BehaviorNodeContainer {
                 node,
@@ -275,11 +333,24 @@ impl BehaviorNode for ForceSuccessNode {
     }
 }
 
-#[derive(Default)]
-pub struct ForceFailureNode(Option<BehaviorNodeContainer>);
+pub struct ForceFailureNode<P>(Option<BehaviorNodeContainer<P>>)
+where
+    P: ContextProvider;
 
-impl BehaviorNode for ForceFailureNode {
-    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+impl<P> Default for ForceFailureNode<P>
+where
+    P: ContextProvider,
+{
+    fn default() -> Self {
+        Self(None)
+    }
+}
+
+impl<P> BehaviorNode<P> for ForceFailureNode<P>
+where
+    P: ContextProvider,
+{
+    fn tick(&mut self, arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         if let Some(ref mut node) = self.0 {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
             if let BehaviorResult::Running = node.node.tick(arg, ctx) {
@@ -293,7 +364,11 @@ impl BehaviorNode for ForceFailureNode {
         }
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+    fn add_child(
+        &mut self,
+        node: Box<dyn BehaviorNode<P>>,
+        blackboard_map: BBMap,
+    ) -> AddChildResult {
         if self.0.is_none() {
             self.0 = Some(BehaviorNodeContainer {
                 node,
@@ -306,11 +381,22 @@ impl BehaviorNode for ForceFailureNode {
     }
 }
 
-#[derive(Default)]
-pub struct InverterNode(Option<BehaviorNodeContainer>);
+pub struct InverterNode<P>(Option<BehaviorNodeContainer<P>>);
 
-impl BehaviorNode for InverterNode {
-    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+impl<P> Default for InverterNode<P>
+where
+    P: ContextProvider,
+{
+    fn default() -> Self {
+        Self(None)
+    }
+}
+
+impl<P> BehaviorNode<P> for InverterNode<P>
+where
+    P: ContextProvider,
+{
+    fn tick(&mut self, arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         if let Some(ref mut node) = self.0 {
             std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
             let res = match node.node.tick(arg, ctx) {
@@ -325,7 +411,11 @@ impl BehaviorNode for InverterNode {
         }
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+    fn add_child(
+        &mut self,
+        node: Box<dyn BehaviorNode<P>>,
+        blackboard_map: BBMap,
+    ) -> AddChildResult {
         if self.0.is_none() {
             self.0 = Some(BehaviorNodeContainer {
                 node,
@@ -340,18 +430,32 @@ impl BehaviorNode for InverterNode {
 
 const N: Lazy<Symbol> = Lazy::new(|| "n".into());
 
-#[derive(Default)]
-pub(super) struct RepeatNode {
+pub(super) struct RepeatNode<P> {
     n: Option<usize>,
-    child: Option<BehaviorNodeContainer>,
+    child: Option<BehaviorNodeContainer<P>>,
 }
 
-impl BehaviorNode for RepeatNode {
+impl<P> Default for RepeatNode<P>
+where
+    P: ContextProvider,
+{
+    fn default() -> Self {
+        Self {
+            n: None,
+            child: None,
+        }
+    }
+}
+
+impl<P> BehaviorNode<P> for RepeatNode<P>
+where
+    P: ContextProvider,
+{
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![PortSpec::new_in(*N)]
     }
 
-    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         if let Some((current, child)) = self
             .n
             .or_else(|| ctx.get_parse::<usize>("n"))
@@ -374,7 +478,11 @@ impl BehaviorNode for RepeatNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+    fn add_child(
+        &mut self,
+        val: Box<dyn BehaviorNode<P>>,
+        blackboard_map: BBMap,
+    ) -> AddChildResult {
         if self.child.is_some() {
             return Err(AddChildError::TooManyNodes);
         }
@@ -386,18 +494,26 @@ impl BehaviorNode for RepeatNode {
     }
 }
 
-#[derive(Default)]
-pub(super) struct RetryNode {
+pub(super) struct RetryNode<P> {
     n: Option<usize>,
-    child: Option<BehaviorNodeContainer>,
+    child: Option<BehaviorNodeContainer<P>>,
 }
 
-impl BehaviorNode for RetryNode {
+impl<P: ContextProvider> Default for RetryNode<P> {
+    fn default() -> Self {
+        Self {
+            n: None,
+            child: None,
+        }
+    }
+}
+
+impl<P: ContextProvider> BehaviorNode<P> for RetryNode<P> {
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![PortSpec::new_in(*N)]
     }
 
-    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         if let Some((current, child)) = self
             .n
             .or_else(|| ctx.get_parse::<usize>("n"))
@@ -420,7 +536,11 @@ impl BehaviorNode for RetryNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+    fn add_child(
+        &mut self,
+        val: Box<dyn BehaviorNode<P>>,
+        blackboard_map: BBMap,
+    ) -> AddChildResult {
         if self.child.is_some() {
             return Err(AddChildError::TooManyNodes);
         }
@@ -437,12 +557,15 @@ pub(crate) static OUTPUT: Lazy<Symbol> = Lazy::new(|| "output".into());
 
 pub(crate) struct SetBoolNode;
 
-impl BehaviorNode for SetBoolNode {
+impl<P> BehaviorNode<P> for SetBoolNode
+where
+    P: ContextProvider,
+{
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![PortSpec::new_in(*VALUE), PortSpec::new_out(*OUTPUT)]
     }
 
-    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, _arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         let result = ctx.get_parse::<bool>(*VALUE);
         if let Some(value) = result {
             ctx.set(*OUTPUT, value);
@@ -457,12 +580,15 @@ pub(crate) static INPUT: Lazy<Symbol> = Lazy::new(|| "input".into());
 
 pub struct IsTrueNode;
 
-impl BehaviorNode for IsTrueNode {
+impl<P> BehaviorNode<P> for IsTrueNode
+where
+    P: ContextProvider,
+{
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![PortSpec::new_in(*INPUT)]
     }
 
-    fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+    fn tick(&mut self, _arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
         if let Some(input) = ctx.get_parse::<bool>(*INPUT) {
             if input {
                 BehaviorResult::Success
@@ -475,15 +601,29 @@ impl BehaviorNode for IsTrueNode {
     }
 }
 
-#[derive(Default)]
-pub struct IfNode {
-    children: Vec<BehaviorNodeContainer>,
+pub struct IfNode<P> {
+    children: Vec<BehaviorNodeContainer<P>>,
     condition_result: Option<BehaviorResult>,
 }
 
-impl BehaviorNode for IfNode {
-    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        let mut ticker = |node: &mut BehaviorNodeContainer| {
+impl<P> Default for IfNode<P>
+where
+    P: ContextProvider,
+{
+    fn default() -> Self {
+        Self {
+            children: vec![],
+            condition_result: None,
+        }
+    }
+}
+
+impl<P> BehaviorNode<P> for IfNode<P>
+where
+    P: ContextProvider,
+{
+    fn tick(&mut self, arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
+        let mut ticker = |node: &mut BehaviorNodeContainer<P>| {
             std::mem::swap(&mut node.blackboard_map, &mut ctx.blackboard_map);
             let res = node.node.tick(arg, ctx);
             std::mem::swap(&mut node.blackboard_map, &mut ctx.blackboard_map);
@@ -525,7 +665,11 @@ impl BehaviorNode for IfNode {
         branch_result
     }
 
-    fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
+    fn add_child(
+        &mut self,
+        val: Box<dyn BehaviorNode<P>>,
+        blackboard_map: BBMap,
+    ) -> AddChildResult {
         if self.children.len() < 3 {
             self.children.push(BehaviorNodeContainer {
                 node: val,

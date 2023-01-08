@@ -4,7 +4,7 @@ use super::nom_parser::{TreeDef, TreeSource};
 use crate::{
     error::LoadError,
     nodes::{IsTrueNode, SubtreeNode, INPUT},
-    BBMap, BehaviorNode, PortSpec, PortType, Registry, Symbol,
+    BBMap, BehaviorNode, ContextProvider, PortSpec, PortType, Registry, Symbol,
 };
 
 /// Instantiate a behavior tree from a AST of a tree.
@@ -12,11 +12,14 @@ use crate::{
 /// `check_ports` enables static checking of port availability before actually ticking.
 /// It is useful to catch errors in a behavior tree source file, but you need to
 /// implement [`crate::BehaviorNode::provided_ports`] to use it.
-pub fn load(
+pub fn load<P>(
     tree_source: &TreeSource,
-    registry: &Registry,
+    registry: &Registry<P>,
     check_ports: bool,
-) -> Result<Box<dyn BehaviorNode>, LoadError> {
+) -> Result<Box<dyn BehaviorNode<P>>, LoadError>
+where
+    P: ContextProvider,
+{
     let main = tree_source
         .tree_defs
         .iter()
@@ -87,14 +90,17 @@ impl<'a, 'src> TreeStack<'a, 'src> {
     }
 }
 
-fn load_recurse(
+fn load_recurse<P>(
     parent: &TreeDef,
-    registry: &Registry,
+    registry: &Registry<P>,
     tree_source: &TreeSource,
     check_ports: bool,
     parent_stack: &TreeStack,
     vars: &mut HashSet<Symbol>,
-) -> Result<Box<dyn BehaviorNode>, LoadError> {
+) -> Result<Box<dyn BehaviorNode<P>>, LoadError>
+where
+    P: ContextProvider,
+{
     let mut ret = if let Some(ret) = registry.build(parent.ty) {
         ret
     } else {
@@ -153,7 +159,7 @@ fn load_recurse(
                     *INPUT,
                     crate::BlackboardValue::Ref(child.ty.into(), PortType::Input),
                 );
-                Some((Box::new(IsTrueNode) as Box<dyn BehaviorNode>, bbmap))
+                Some((Box::new(IsTrueNode) as Box<dyn BehaviorNode<P>>, bbmap))
             } else {
                 None
             }

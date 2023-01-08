@@ -745,22 +745,32 @@ impl From<&str> for BlackboardValue {
 /// The third sect in the society is copy-on-write reference, which is what `Rc` does.
 pub type Blackboard = HashMap<Symbol, Rc<dyn Any>>;
 pub type BBMap = HashMap<Symbol, BlackboardValue>;
-pub type BehaviorCallback<'a> = &'a mut dyn FnMut(&dyn Any) -> Option<Box<dyn Any>>;
+pub type BehaviorCallback<'a, P: ContextProvider> =
+    &'a mut dyn FnMut(&<P as ContextProvider>::Send) -> Option<<P as ContextProvider>::Recv>;
 
-pub trait BehaviorNode {
+pub trait ContextProvider: 'static {
+    type Send;
+    type Recv;
+}
+
+pub trait BehaviorNode<P: ContextProvider> {
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![]
     }
 
-    fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult;
+    fn tick(&mut self, arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult;
 
-    fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: BBMap) -> AddChildResult {
+    fn add_child(
+        &mut self,
+        _val: Box<dyn BehaviorNode<P>>,
+        _blackboard_map: BBMap,
+    ) -> AddChildResult {
         Err(AddChildError::TooManyNodes)
     }
 }
 
-pub struct BehaviorNodeContainer {
-    node: Box<dyn BehaviorNode>,
+pub struct BehaviorNodeContainer<P> {
+    node: Box<dyn BehaviorNode<P>>,
     blackboard_map: HashMap<Symbol, BlackboardValue>,
 }
 

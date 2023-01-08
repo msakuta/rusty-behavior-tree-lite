@@ -1,11 +1,16 @@
-use crate::{error::LoadYamlError, BBMap, BehaviorNode, BlackboardValue, PortType, Registry};
+use crate::{
+    error::LoadYamlError, BBMap, BehaviorNode, BlackboardValue, ContextProvider, PortType, Registry,
+};
 use serde_yaml::Value;
 use std::collections::HashMap;
 
-fn recurse_parse(
+fn recurse_parse<P>(
     value: &serde_yaml::Value,
-    reg: &Registry,
-) -> Result<Option<(Box<dyn BehaviorNode>, BBMap)>, LoadYamlError> {
+    reg: &Registry<P>,
+) -> Result<Option<(Box<dyn BehaviorNode<P>>, BBMap)>, LoadYamlError>
+where
+    P: ContextProvider,
+{
     let mut node = if let Some(node) =
         value
             .get("type")
@@ -48,10 +53,13 @@ fn recurse_parse(
     Ok(Some((node, blackboard_map)))
 }
 
-pub fn load_yaml(
+pub fn load_yaml<P>(
     yaml: &str,
-    reg: &Registry,
-) -> Result<HashMap<String, Box<dyn BehaviorNode>>, LoadYamlError> {
+    reg: &Registry<P>,
+) -> Result<HashMap<String, Box<dyn BehaviorNode<P>>>, LoadYamlError>
+where
+    P: ContextProvider,
+{
     let yaml = serde_yaml::from_str(yaml)?;
     if let Value::Mapping(root) = yaml {
         // if let Some(Value::Mapping(nodes)) = root.get(&Value::from("nodes")) {
