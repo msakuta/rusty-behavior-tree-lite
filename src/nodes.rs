@@ -4,6 +4,13 @@ use crate::{
     Context, ContextProvider, Lazy, PortSpec, PortType, Symbol,
 };
 
+pub struct NullProvider;
+
+impl ContextProvider for NullProvider {
+    type Send = ();
+    type Recv = ();
+}
+
 /// SubtreeNode is a container for a subtree, introducing a local namescope of blackboard variables.
 pub struct SubtreeNode<P> {
     child: BehaviorNodeContainer<P>,

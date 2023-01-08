@@ -75,9 +75,9 @@
 //! ```rust
 //! # use behavior_tree_lite::*;
 //! # struct PrintBodyNode;
-//! # impl BehaviorNode for PrintBodyNode { fn tick(&mut self, _: BehaviorCallback, _: &mut Context) -> BehaviorResult { BehaviorResult::Success }}
+//! # impl BehaviorNode<NullProvider> for PrintBodyNode { fn tick(&mut self, _: BehaviorCallback<NullProvider>, _: &mut Context) -> BehaviorResult { BehaviorResult::Success }}
 //! # struct PrintArmNode;
-//! # impl BehaviorNode for PrintArmNode { fn tick(&mut self, _: BehaviorCallback, _: &mut Context) -> BehaviorResult { BehaviorResult::Success }}
+//! # impl BehaviorNode<NullProvider> for PrintArmNode { fn tick(&mut self, _: BehaviorCallback<NullProvider>, _: &mut Context) -> BehaviorResult { BehaviorResult::Success }}
 //! let mut root = SequenceNode::default();
 //! root.add_child(Box::new(PrintBodyNode), hash_map!());
 //!
@@ -92,9 +92,9 @@
 //!
 //! ```rust
 //! # use behavior_tree_lite::*;
-//! # let mut root = SequenceNode::default();
+//! # let mut root = SequenceNode::<NullProvider>::default();
 //! # let mut ctx = Context::default();
-//! let result = root.tick(&mut |_| None, &mut ctx);
+//! let result = root.tick(&mut |_| (), &mut ctx);
 //! ```
 //!
 //! The first argument to the `tick` has weird value `&mut |_| None`.
@@ -106,11 +106,17 @@
 //!
 //! ```rust
 //! # use behavior_tree_lite::*;
-//! # let mut tree = SequenceNode::default();
+//! # let mut tree = SequenceNode::<SendBool>::default();
+//! struct SendBool;
+//!
+//! impl ContextProvider for SendBool {
+//!     type Send = bool;
+//!     type Recv = ();
+//! }
+//!
 //! tree.tick(
-//!     &mut |v: &dyn std::any::Any| {
-//!         println!("{}", *v.downcast_ref::<bool>().unwrap());
-//!         None
+//!     &mut |v: &bool| {
+//!         println!("{}", *v);
 //!     },
 //!     &mut Context::default(),
 //! );
@@ -147,8 +153,8 @@
 //! # struct Arm { name: String };
 //! struct PrintArmNode;
 //!
-//! impl BehaviorNode for PrintArmNode {
-//!     fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+//! impl<P> BehaviorNode<P> for PrintArmNode where P: ContextProvider {
+//!     fn tick(&mut self, _arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
 //!         println!("Arm {:?}", ctx);
 //!
 //!         if let Some(arm) = ctx.get::<Arm>("arm") {
@@ -168,8 +174,8 @@
 //! # struct Body { left_arm: (), right_arm: () };
 //! struct PrintBodyNode;
 //!
-//! impl BehaviorNode for PrintBodyNode {
-//!     fn tick(&mut self, _arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+//! impl<P> BehaviorNode<P> for PrintBodyNode where P: ContextProvider {
+//!     fn tick(&mut self, _arg: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
 //!         if let Some(body) = ctx.get::<Body>("body") {
 //!             let left_arm = body.left_arm.clone();
 //!             let right_arm = body.right_arm.clone();
@@ -196,13 +202,13 @@
 //! ```rust
 //! # struct Body;
 //! use ::behavior_tree_lite::{
-//!     BehaviorNode, BehaviorResult, BehaviorCallback, Symbol, Lazy, Context
+//!     BehaviorNode, BehaviorResult, BehaviorCallback, Symbol, Lazy, Context, ContextProvider
 //! };
 //!
 //! struct PrintBodyNode;
 //!
-//! impl BehaviorNode for PrintBodyNode {
-//!     fn tick(&mut self, _: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+//! impl<P> BehaviorNode<P> for PrintBodyNode where P: ContextProvider {
+//!     fn tick(&mut self, _: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
 //!         static BODY_SYM: Lazy<Symbol> = Lazy::new(|| "body".into());
 //!         static LEFT_ARM_SYM: Lazy<Symbol> = Lazy::new(|| "left_arm".into());
 //!         static RIGHT_ARM_SYM: Lazy<Symbol> = Lazy::new(|| "right_arm".into());
@@ -226,12 +232,13 @@
 //!
 //! ```rust
 //! use ::behavior_tree_lite::{
-//!     BehaviorNode, BehaviorCallback, BehaviorResult, Context, Symbol, Lazy, PortSpec
+//!     BehaviorNode, BehaviorCallback, BehaviorResult, Context, Symbol, Lazy, PortSpec,
+//!     ContextProvider
 //! };
 //!
 //! struct PrintBodyNode;
 //!
-//! impl BehaviorNode for PrintBodyNode {
+//! impl<P> BehaviorNode<P> for PrintBodyNode where P: ContextProvider {
 //!     fn provided_ports(&self) -> Vec<PortSpec> {
 //!         vec![
 //!             PortSpec::new_in("body"),
@@ -240,7 +247,7 @@
 //!         ]
 //!     }
 //!
-//!     fn tick(&mut self, _: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+//!     fn tick(&mut self, _: BehaviorCallback<P>, ctx: &mut Context) -> BehaviorResult {
 //!         // ...
 //!         BehaviorResult::Success
 //!     }
@@ -284,9 +291,9 @@
 //! ```rust
 //! # use ::behavior_tree_lite::*;
 //! # struct PrintBodyNode;
-//! # impl BehaviorNode for PrintBodyNode { fn tick(&mut self, _: BehaviorCallback, _: &mut Context) -> BehaviorResult { BehaviorResult::Success }}
+//! # impl BehaviorNode<NullProvider> for PrintBodyNode { fn tick(&mut self, _: BehaviorCallback<NullProvider>, _: &mut Context) -> BehaviorResult { BehaviorResult::Success }}
 //! # struct PrintArmNode;
-//! # impl BehaviorNode for PrintArmNode { fn tick(&mut self, _: BehaviorCallback, _: &mut Context) -> BehaviorResult { BehaviorResult::Success }}
+//! # impl BehaviorNode<NullProvider> for PrintArmNode { fn tick(&mut self, _: BehaviorCallback<NullProvider>, _: &mut Context) -> BehaviorResult { BehaviorResult::Success }}
 //! let mut registry = Registry::default();
 //! registry.register("PrintArmNode", boxify(|| PrintArmNode));
 //! registry.register("PrintBodyNode", boxify(|| PrintBodyNode));
@@ -333,7 +340,7 @@
 //! # use ::behavior_tree_lite::*;
 //! # use ::nom::IResult;
 //! # let source_string = "";
-//! # let mut registry = Registry::default();
+//! # let mut registry = Registry::<NullProvider>::default();
 //! # let check_ports = true;
 //! # (|| -> Result<(), error::LoadError> {
 //! # let (_, tree_source) = parse_file(source_string).unwrap();
@@ -680,7 +687,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 pub use crate::context::Context;
-pub use crate::nodes::{FallbackNode, SequenceNode};
+pub use crate::nodes::{FallbackNode, NullProvider, SequenceNode};
 pub use crate::symbol::Symbol;
 pub use crate::{
     parser::{load, load_yaml, node_def, parse_file, parse_nodes, NodeDef},
