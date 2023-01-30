@@ -96,6 +96,7 @@ impl BehaviorNode for SequenceNode {
             match node.node.tick(arg, ctx) {
                 BehaviorResult::Fail => {
                     std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+                    self.current_child = None;
                     return BehaviorResult::Fail;
                 }
                 BehaviorResult::Running => {
@@ -181,6 +182,7 @@ impl BehaviorNode for FallbackNode {
             match node.node.tick(arg, ctx) {
                 BehaviorResult::Success => {
                     std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+                    self.current_child = None;
                     return BehaviorResult::Success;
                 }
                 BehaviorResult::Running => {
