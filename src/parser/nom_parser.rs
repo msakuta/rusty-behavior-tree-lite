@@ -7,7 +7,7 @@ use nom::{
     combinator::{opt, recognize, value},
     multi::{many0, many1, separated_list1},
     sequence::{delimited, pair, preceded, terminated, tuple},
-    IResult,
+    IResult, Finish,
 };
 
 use crate::PortType;
@@ -484,7 +484,11 @@ fn str_literal(input: &str) -> IResult<&str, BlackboardValue> {
     ))
 }
 
-pub fn parse_file(i: &str) -> IResult<&str, TreeSource> {
+pub fn parse_file(i: &str) -> Result<(&str, TreeSource), nom::error::Error<&str>> {
+    source_text(i).finish()
+}
+
+fn source_text(i: &str) -> IResult<&str, TreeSource> {
     enum NodeOrTree<'src> {
         Node(NodeDef<'src>),
         Tree(TreeRootDef<'src>),
