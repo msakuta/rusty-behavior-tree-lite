@@ -316,9 +316,8 @@
 //!
 //! ```rust
 //! # use ::behavior_tree_lite::*;
-//! # use ::nom::IResult;
 //! # let source_string = "";
-//! # (|| -> IResult<&str, _> {
+//! # (|| -> Result<(&str, _), nom::error::Error<&str>> {
 //! let (_, tree_source) = parse_file(source_string)?;
 //! # Ok((source_string, tree_source))
 //! # })();
