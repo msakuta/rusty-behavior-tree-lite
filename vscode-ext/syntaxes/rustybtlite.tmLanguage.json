@@ -28,7 +28,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.rustybtlite",
-				"match": "\\b(in|out|true|false|if|tree|node|var)\\b"
+				"match": "\\b(in|out|true|false|if|else|tree|node|var)\\b"
 			}]
 		},
 		"strings": {
