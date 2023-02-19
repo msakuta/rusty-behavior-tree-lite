@@ -679,7 +679,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 pub use crate::context::Context;
-pub use crate::nodes::{FallbackNode, SequenceNode};
+pub use crate::nodes::{tick_child_node, FallbackNode, SequenceNode};
 pub use crate::symbol::Symbol;
 pub use crate::{
     parser::{load, load_yaml, node_def, parse_file, parse_nodes, NodeDef},
@@ -761,6 +761,18 @@ pub trait BehaviorNode {
 pub struct BehaviorNodeContainer {
     node: Box<dyn BehaviorNode>,
     blackboard_map: HashMap<Symbol, BlackboardValue>,
+}
+
+impl BehaviorNodeContainer {
+    pub fn new(
+        node: Box<dyn BehaviorNode>,
+        blackboard_map: HashMap<Symbol, BlackboardValue>,
+    ) -> Self {
+        Self {
+            node,
+            blackboard_map,
+        }
+    }
 }
 
 #[macro_export]

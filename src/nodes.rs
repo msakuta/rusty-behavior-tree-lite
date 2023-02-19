@@ -4,6 +4,17 @@ use crate::{
     Context, Lazy, PortSpec, PortType, Symbol,
 };
 
+pub fn tick_child_node(
+    arg: BehaviorCallback,
+    ctx: &mut Context,
+    node: &mut BehaviorNodeContainer,
+) -> BehaviorResult {
+    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+    let res = node.node.tick(arg, ctx);
+    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+    res
+}
+
 /// SubtreeNode is a container for a subtree, introducing a local namescope of blackboard variables.
 pub struct SubtreeNode {
     child: BehaviorNodeContainer,

@@ -7,7 +7,7 @@ use nom::{
     combinator::{opt, recognize, value},
     multi::{many0, many1, separated_list1},
     sequence::{delimited, pair, preceded, terminated, tuple},
-    IResult, Finish,
+    Finish, IResult,
 };
 
 use crate::PortType;
