@@ -1,7 +1,7 @@
 on:
   push:
-    tags:
-      - "*"
+    paths:
+      - "vs-codex/**"
 
 name: Deploy Extension
 jobs:
