@@ -10,6 +10,7 @@
   "categories": [
     "Programming Languages"
   ],
+  "publisher": "msakuta",
   "contributes": {
     "languages": [{
       "id": "rustybtlite",
