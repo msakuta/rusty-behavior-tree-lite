@@ -25,14 +25,15 @@
      inkscape:pagecheckerboard="0"
      showgrid="true"
      inkscape:zoom="3.8660387"
-     inkscape:cx="67.769627"
-     inkscape:cy="94.411885"
+     inkscape:cx="68.02829"
+     inkscape:cy="53.025853"
      inkscape:window-width="1920"
      inkscape:window-height="1017"
      inkscape:window-x="-8"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg38457">
+     inkscape:current-layer="svg38457"
+     inkscape:snap-object-midpoints="true">
     <inkscape:grid
        type="xygrid"
        id="grid70597"
@@ -40,9 +41,13 @@
        spacingy="4"
        empspacing="4" />
   </sodipodi:namedview>
+  <path
+     id="text62144-1"
+     style="font-style:normal;font-weight:normal;font-size:102.778px;line-height:1.25;font-family:sans-serif;fill:#696b95;fill-opacity:1;stroke:none;stroke-width:2.56945"
+     d="M 74.623047 26.296875 L 74.623047 41.099609 L 97.40625 41.099609 L 97.40625 92 L 116.2207 92 L 116.2207 41.099609 L 139.00391 41.099609 L 139.00391 26.296875 L 74.623047 26.296875 z " />
   <g
      aria-label="B"
-     transform="matrix(1.714844,0,0,1.7966378,-51.178877,-31.903287)"
+     transform="matrix(1.7066654,0,0,1.8022801,-74.782174,-40.103972)"
      id="text62144"
      style="font-size:67.4945px;line-height:1.25;fill:#696b95;stroke-width:1.68737">
     <path
@@ -50,21 +55,8 @@
        style="font-weight:bold;-inkscape-font-specification:'sans-serif, Bold'"
        id="path70679" />
   </g>
-  <text
-     xml:space="preserve"
-     style="font-style:normal;font-weight:normal;font-size:73.9331px;line-height:1.25;font-family:sans-serif;fill:#696b95;fill-opacity:1;stroke:none;stroke-width:1.84833"
-     x="95.60067"
-     y="114.94635"
-     id="text62144-1"
-     transform="scale(0.95372907,1.0485158)"><tspan
-       sodipodi:role="line"
-       id="tspan62142-4"
-       x="95.60067"
-       y="114.94635"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:73.9331px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#696b95;fill-opacity:1;stroke-width:1.84833">T</tspan></text>
   <path
-     style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:#696b95;fill-opacity:1;stroke:none;stroke-width:2.93345;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;-inkscape-stroke:none;stop-color:#000000;stop-opacity:1"
-     d="m 32,32 -16,8 v 8 l 16,8 v 8 l -16,8 v 8 l 16,8 v 8 l -16,8 v 8 l 16,8 h 8 V 32 Z"
-     id="path70733"
-     sodipodi:nodetypes="ccccccccccccccc" />
+     id="path874"
+     style="fill:#696b95;stroke-width:2.85126;-inkscape-stroke:none;stop-color:#000000"
+     d="m 106.70275,80.966504 a 28.470994,28.470994 0 0 0 -3.37274,0.264676 l -1.55592,5.565775 a 23.231061,23.231061 0 0 0 -4.90031,1.606967 l -4.601578,-3.412441 a 28.470994,28.470994 0 0 0 -4.970249,3.688461 l 2.015312,5.372939 a 23.231061,23.231061 0 0 0 -2.917113,4.21593 l -5.764281,-0.07183 a 28.470994,28.470994 0 0 0 -1.847056,5.919309 l 4.836004,3.18745 a 23.231061,23.231061 0 0 0 -0.1532,2.13444 23.231061,23.231061 0 0 0 0.209856,2.93412 l -4.675321,3.28957 a 28.470994,28.470994 0 0 0 1.990744,5.88716 l 5.783185,-0.24575 a 23.231061,23.231061 0 0 0 3.049452,4.03252 l -1.850834,5.43721 a 28.470994,28.470994 0 0 0 5.085573,3.59772 l 4.546756,-3.59203 a 23.231061,23.231061 0 0 0 4.83036,1.44625 l 1.71661,5.48449 a 28.470994,28.470994 0 0 0 2.54469,0.2004 28.470994,28.470994 0 0 0 3.71493,-0.25334 L 112,132 a 23.231061,23.231061 0 0 0 4.65265,-1.59186 l 4.66018,3.45592 a 28.470994,28.470994 0 0 0 5.02132,-3.8208 l -2.03983,-5.43912 a 23.231061,23.231061 0 0 0 2.66756,-3.91723 l 5.85501,0.0737 a 28.470994,28.470994 0 0 0 1.86219,-6.08567 l -4.88895,-3.22333 a 23.231061,23.231061 0 0 0 0.14366,-2.01344 23.231061,23.231061 0 0 0 -0.15884,-2.6581 l 4.75093,-3.34439 a 28.470994,28.470994 0 0 0 -2.021,-6.013845 l -5.77939,0.245774 A 23.231061,23.231061 0 0 0 123.85,93.767417 l 1.87733,-5.509063 a 28.470994,28.470994 0 0 0 -5.09313,-3.644977 l -4.53922,3.58448 a 23.231061,23.231061 0 0 0 -4.83414,-1.538907 l -1.73361,-5.543087 a 28.470994,28.470994 0 0 0 -2.8245,-0.149353 z m 0,16.856137 a 11.61553,11.61553 0 0 1 11.61554,11.615529 11.61553,11.61553 0 0 1 -11.61554,11.61553 11.61553,11.61553 0 0 1 -11.61552,-11.61553 11.61553,11.61553 0 0 1 11.61552,-11.615529 z" />
 </svg>
