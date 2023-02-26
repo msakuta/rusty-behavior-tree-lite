@@ -4,10 +4,43 @@
    width="144"
    version="1.1"
    id="svg38457"
+   sodipodi:docname="bt-logo-blu.svg"
+   inkscape:version="1.1.2 (b8e25be833, 2022-02-05)"
+   inkscape:export-filename="bt-logo-blu.png"
+   inkscape:export-xdpi="128"
+   inkscape:export-ydpi="128"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
   <defs
      id="defs38461" />
+  <sodipodi:namedview
+     id="namedview38459"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     showgrid="true"
+     inkscape:zoom="3.8660387"
+     inkscape:cx="68.286952"
+     inkscape:cy="53.025853"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg38457"
+     inkscape:snap-object-midpoints="true">
+    <inkscape:grid
+       type="xygrid"
+       id="grid70597"
+       spacingx="4"
+       spacingy="4"
+       empspacing="4" />
+  </sodipodi:namedview>
   <g
      aria-label="B"
      transform="matrix(1.7066654,0,0,1.8022801,-30.610477,-36.32465)"
@@ -21,7 +54,8 @@
   <path
      style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:#696b95;fill-opacity:1;stroke:none;stroke-width:4.93224;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;-inkscape-stroke:none;stop-color:#000000;stop-opacity:1"
      d="M 32,32 C 25.714607,32 18.666667,32 18.666667,45.333333 18.666667,58.666667 25.333333,72 25.333333,72 c 0,0 -6.666666,13.333333 -6.666666,26.666667 C 18.666667,112 25.333333,112 32,112 38.666667,112 45.333333,112 45.333333,98.666667 45.333333,85.333333 38.666667,72 38.666667,72 c 0,0 6.666666,-13.333333 6.666666,-26.666667 C 45.333333,32 38.285393,32 32,32 Z"
-     id="path21820" />
+     id="path21820"
+     sodipodi:nodetypes="sscssscss" />
   <rect
      style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:#696b95;fill-opacity:1;stroke:none;stroke-width:2.4163;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;-inkscape-stroke:none;stop-color:#000000;stop-opacity:1"
      id="rect22138"
