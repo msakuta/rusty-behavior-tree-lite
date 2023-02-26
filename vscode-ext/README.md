@@ -14,7 +14,7 @@ Syntax highlighting for:
 * Literals
 * Line comments
 
-![screenshot](images/screenshot00.png)
+![screenshot](https://raw.githubusercontent.com/msakuta/rusty-behavior-tree-lite/master/vscode-ext/images/screenshot00.png)
 
 It is very simple, but helps visibility a lot.
 

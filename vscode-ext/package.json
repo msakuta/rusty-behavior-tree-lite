@@ -3,7 +3,7 @@
   "displayName": "rusty_behavior_tree_lite",
   "description": "Syntax highlighting support for rusty-behavior-tree-lite",
   "repository": "https://github.com/msakuta/rusty-behavior-tree-lite",
-  "version": "0.2.3",
+  "version": "0.0.4",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -11,6 +11,7 @@
     "Programming Languages"
   ],
   "publisher": "msakuta",
+  "icon": "images/icon.png",
   "contributes": {
     "languages": [{
       "id": "rustybtlite",
