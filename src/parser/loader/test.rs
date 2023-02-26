@@ -434,3 +434,23 @@ tree main = Sequence {
         panic!("Should fail");
     }
 }
+
+#[test]
+fn test_var_assign() {
+    let src = "
+tree main = Sequence {
+    var a = false
+    a = true
+    IsTrue (input <- a)
+}
+";
+
+    let (_, tree_source) = crate::parse_file(src).unwrap();
+
+    let registry = Registry::default();
+    let mut res = load(&tree_source, &registry, true).unwrap();
+    assert_eq!(
+        res.tick(&mut |_| None, &mut Context::default()),
+        BehaviorResult::Success
+    );
+}

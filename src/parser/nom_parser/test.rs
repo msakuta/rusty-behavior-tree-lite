@@ -910,3 +910,46 @@ tree main = (!a || b) && c
         ))
     );
 }
+
+#[test]
+fn test_var_assign() {
+    assert_eq!(
+        parse_file(
+            "
+tree main = Sequence {
+    var a = false
+    a = true
+    IsTrue (input <- a)
+}
+"
+        ),
+        Ok((
+            "",
+            TreeSource {
+                node_defs: vec![],
+                tree_defs: vec![TreeRootDef::new(
+                    "main",
+                    TreeDef::new_with_children_and_vars(
+                        "Sequence",
+                        vec![
+                            set_bool("a", "false"),
+                            set_bool("a", "true"),
+                            TreeDef::new_with_ports(
+                                "IsTrue",
+                                vec![PortMap {
+                                    ty: PortType::Input,
+                                    node_port: "input",
+                                    blackboard_value: BlackboardValue::Ref("a"),
+                                }]
+                            )
+                        ],
+                        vec![VarDef {
+                            name: "a",
+                            init: Some("false"),
+                        }],
+                    )
+                )]
+            }
+        ))
+    );
+}

@@ -125,6 +125,12 @@ pub struct VarDef<'src> {
     pub(crate) init: Option<&'src str>,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub struct VarAssign<'src> {
+    pub(crate) name: &'src str,
+    pub(crate) init: &'src str,
+}
+
 impl<'src> TreeDef<'src> {
     #[allow(dead_code)]
     fn new(ty: &'src str) -> Self {
@@ -183,28 +189,35 @@ impl<'src> TreeDef<'src> {
         port_maps: Vec<PortMap<'src>>,
         children: Vec<TreeElem<'src>>,
     ) -> Self {
+        fn new_set_bool(name: &str, init: String) -> TreeDef {
+            TreeDef::new_with_ports(
+                "SetBool",
+                vec![
+                    PortMap {
+                        node_port: "value",
+                        blackboard_value: BlackboardValue::Literal(init),
+                        ty: PortType::Input,
+                    },
+                    PortMap {
+                        node_port: "output",
+                        blackboard_value: BlackboardValue::Ref(name),
+                        ty: PortType::Output,
+                    },
+                ],
+            )
+        }
+
         let (children, vars) = children.into_iter().fold((vec![], vec![]), |mut acc, cur| {
             match cur {
                 TreeElem::Node(node) => acc.0.push(node),
                 TreeElem::Var(var) => {
                     if let Some(init) = var.init {
-                        acc.0.push(TreeDef::new_with_ports(
-                            "SetBool",
-                            vec![
-                                PortMap {
-                                    node_port: "value",
-                                    blackboard_value: BlackboardValue::Literal(init.to_owned()),
-                                    ty: PortType::Input,
-                                },
-                                PortMap {
-                                    node_port: "output",
-                                    blackboard_value: BlackboardValue::Ref(var.name),
-                                    ty: PortType::Output,
-                                },
-                            ],
-                        ));
+                        acc.0.push(new_set_bool(&var.name, init.to_owned()));
                     }
                     acc.1.push(var);
+                }
+                TreeElem::VarAssign(var) => {
+                    acc.0.push(new_set_bool(&var.name, var.init.to_owned()));
                 }
             }
             acc
@@ -221,7 +234,7 @@ impl<'src> TreeDef<'src> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum BlackboardValue<'src> {
-    /// Litral value could have decoded, so it is an owned string.
+    /// Literal value could have decoded, so it is an owned string.
     Literal(String),
     Ref(&'src str),
 }
@@ -291,6 +304,7 @@ fn some<I, R>(f: impl Fn(I) -> IResult<I, R>) -> impl Fn(I) -> IResult<I, Option
 enum TreeElem<'src> {
     Node(TreeDef<'src>),
     Var(VarDef<'src>),
+    VarAssign(VarAssign<'src>),
 }
 
 fn tree_children(i: &str) -> IResult<&str, Vec<TreeElem>> {
@@ -300,6 +314,7 @@ fn tree_children(i: &str) -> IResult<&str, Vec<TreeElem>> {
         space0,
         alt((
             line_comment,
+            some(var_assign),
             some(var_decl),
             some(parse_condition_node),
             some(parse_tree_elem),
@@ -413,6 +428,18 @@ fn var_decl(i: &str) -> IResult<&str, TreeElem> {
     let (i, _) = opt(line_comment_tree_elem)(i)?;
 
     Ok((i, TreeElem::Var(VarDef { name, init })))
+}
+
+fn var_assign(i: &str) -> IResult<&str, TreeElem> {
+    let (i, name) = delimited(space0, identifier, space0)(i)?;
+
+    let (i, _) = delimited(space0, char('='), space0)(i)?;
+
+    let (i, init) = delimited(space0, alt((tag("true"), tag("false"))), space0)(i)?;
+
+    let (i, _) = opt(line_comment_tree_elem)(i)?;
+
+    Ok((i, TreeElem::VarAssign(VarAssign { name, init })))
 }
 
 fn port_maps(i: &str) -> IResult<&str, Vec<PortMap>> {
