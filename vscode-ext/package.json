@@ -14,8 +14,12 @@
     "languages": [{
       "id": "rustybtlite",
       "aliases": ["rusty-behavior-tree-lite", "rustybtlite"],
-      "extensions": [".txt"],
-      "configuration": "./language-configuration.json"
+      "extensions": [".btc"],
+      "configuration": "./language-configuration.json",
+      "icon": {
+        "light": "./fileicons/bt-logo-blu.svg",
+        "dark": "./fileicons/bt-logo-blu.svg"
+      }
     }],
     "grammars": [{
       "language": "rustybtlite",
