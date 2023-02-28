@@ -549,6 +549,23 @@ tree main = Sequence {
 This design is a step towards statically checked source code.
 
 
+### Variable assignment
+
+A variable can be assigned value with this syntax:
+
+```
+value = true
+```
+
+Currently, only `true` or `false` can be used as the initializer.
+
+It is a syntax sugar like below, but without variable declaration.
+
+```
+SetBool (value <- "true", output -> value)
+```
+
+
 ### Syntax specification
 
 Here is a pseudo-EBNF notation of the syntax.
@@ -566,7 +583,7 @@ port-def = ( "in" | "out" | "inout" ) tree-port-name
 
 tree-port-name = identifier
 
-node = if-syntax | conditional | var-def-syntax
+node = if-syntax | conditional | var-def-syntax | var-assign
 
 if-syntax = "if" "(" conditional ")"
 
@@ -587,6 +604,8 @@ node-port-name = identifier
 blackboard-port-name = identifier
 
 var-def-syntax = "var" identifier "=" initializer
+
+var-assign = identifier "=" initializer
 
 initializer = "true" | "false"
 ```
