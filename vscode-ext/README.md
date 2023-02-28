@@ -1,4 +1,4 @@
-# rusty-behavior-tree-lite README
+# Rusty-behavior-tree-lite Syntax highlighting VSCode Extension
 
 A Visual Studio Code extension for [rusty-behavior-tree-lite](https://github.com/msakuta/rusty-behavior-tree-lite) language syntax highlighting.
 See the repository to check the syntax and how to integrate it to your Rust application.
@@ -14,22 +14,3 @@ Syntax highlighting for:
 ![screenshot](https://raw.githubusercontent.com/msakuta/rusty-behavior-tree-lite/master/vscode-ext/images/screenshot00.png)
 
 It is very simple, but helps visibility a lot.
-
-## Build and Install
-
-You can build and install it manually with the procedure in [Build and Install](#build-and-install) section.
-
-First, install vsce, the VSCode extension manager.
-
-    npm install -g @vscode/vsce
-
-Use it to create a package. A file named `rusty-behavior-tree-lite-0.0.1.vsix` should appear.
-
-    vsce package
-
-Install to your local environment with
-
-    code --install-extension rusty-behavior-tree-lite-0.0.1.vsix
-
-See [the official guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) for more information.
-

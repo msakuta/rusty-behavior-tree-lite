@@ -1,9 +1,5 @@
 # Change Log
 
-All notable changes to the "rusty-behavior-tree-lite" extension will be documented in this file.
+## [0.0.5]
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
-
-- Initial release
+First functional VSCode extension with syntax highlighting.
