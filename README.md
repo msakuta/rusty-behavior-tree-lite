@@ -1,3 +1,6 @@
+
+![logo](vscode-ext/images/icon.png)
+
 # behavior-tree-lite (Rust crate)
 
 An experimental Rust crate for minimal behavior tree implementation.
@@ -243,6 +246,9 @@ Some node types are registered by default, e.g. `SequenceNode` and `FallbackNode
 ## The custom config file format
 
 We have specific file format for describing behavior tree structure of our own.
+The usual file extension for this file format is `.btc` (behavior tree config).
+See the [VSCode extension](https://marketplace.visualstudio.com/items?itemName=msakuta.rusty-behavior-tree-lite) for syntax highlighting.
+
 With this format, the same tree shown as YAML earlier can be written even more concisely like below.
 
 ```
