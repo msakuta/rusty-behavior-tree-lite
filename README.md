@@ -1,42 +1,19 @@
 # behavior-tree-lite (Rust crate)
 
-An experimental Rust crate for minimal behavior tree implementation
+An experimental Rust crate for minimal behavior tree implementation.
 
+![image](vscode-ext/images/screenshot00.png)
 
 ## Overview
 
-This is a sister project of [tiny-behavior-tree](https://github.com/msakuta/rusty_tiny_behavior_tree) which in turn inspired by [BehaviorTreeCPP](https://github.com/BehaviorTree/BehaviorTree.CPP.git).
+This is an implementation of behavior tree in Rust, inspired by [BehaviorTreeCPP](https://github.com/BehaviorTree/BehaviorTree.CPP.git).
 
-While tiny-behavior-tree aims for more innovative design and experimental features, this crate aims for more traditional behavior tree implementation.
-The goal is to make a crate lightweight enough to use in WebAssembly.
+A behavior tree is an extension to finite state machines that makes describing transitional behavior easier.
+See [BehaviorTreeCPP's documentation](https://www.behaviortree.dev/) for the thorough introduction to the idea.
 
-## The difference from tiny-behavior-tree
-
-The main premise of tiny-behavior-tree is that it passes data with function arguments.
-This is very good for making fast and small binary, but it suffers from mixed node types in a tree.
-
-It requires ugly boilerplate code or macros to convert types between different node argument types, and there is the concept of "PeelNode" which would be unnecessary in traditional behavior tree design.
-
-On top of that, uniform types make it much easier to implement configuration file parser that can change the behavior tree at runtime.
-
-
-## Performance consideration
-
-One of the issues with behavior tree in general regarding performance is that the nodes communicate with blackboard variables, which is essentially a key-value store.
-It is not particularly bad, but if you read/write a lot of variables in the blackboard (which easily happens with a large behavior tree), you would pay the cost of constructing a string and looking up HashMap every time.
-
-One of the tiny-behavior-tree's goals is to address this issue by passing variables with function call arguments.
-Why would you pay the cost of looking up HashMap if you already know the address of the variable?
-
-Also, the blackboard is not very scalable, since it is essentially a huge table of global variables.
-Although there is sub-blackboards in subtrees, it is difficult to keep track of similar to scripting language's stack frame without proper debugging tools.
-
-I might experiment with non-string keys to make it more efficient, but the nature of the variables need to be handled dynamically in uniformly typeds nodes.
-
+See the historical notes at the bottom of this README.md for more full history.
 
 ## How it looks like
-
-The usage is very similar to TinyBehaviorTree.
 
 First, you define the state with a data structure.
 
@@ -223,7 +200,7 @@ impl BehaviorNode for PrintBodyNode {
 
 See [example code](examples/main.rs) for the full code.
 
-### Loading the tree structure from a yaml file
+### Loading the tree structure from a yaml file (deprecated)
 
 Deprecated in favor of <a href="#The custom config file format">the custom config file format</a>.
 It doesn't have much advantage over our custom format, except that it can be parsed by any yaml parser library (not limited to Rust).
@@ -619,3 +596,35 @@ initializer = "true" | "false"
 * [x] DSL for defining behavior tree structure
   * [x] Programming language-like flow control syntax
 * [ ] Static type checking for behavior tree definition file
+
+
+
+# Historical notes
+
+This is a sister project of [tiny-behavior-tree](https://github.com/msakuta/rusty_tiny_behavior_tree) which in turn inspired by [BehaviorTreeCPP](https://github.com/BehaviorTree/BehaviorTree.CPP.git).
+
+While tiny-behavior-tree aims for more innovative design and experimental features, this crate aims for more traditional behavior tree implementation.
+The goal is to make a crate lightweight enough to use in WebAssembly.
+
+## The difference from tiny-behavior-tree
+
+The main premise of tiny-behavior-tree is that it passes data with function arguments.
+This is very good for making fast and small binary, but it suffers from mixed node types in a tree.
+
+It requires ugly boilerplate code or macros to convert types between different node argument types, and there is the concept of "PeelNode" which would be unnecessary in traditional behavior tree design.
+
+On top of that, uniform types make it much easier to implement configuration file parser that can change the behavior tree at runtime.
+
+
+## Performance consideration
+
+One of the issues with behavior tree in general regarding performance is that the nodes communicate with blackboard variables, which is essentially a key-value store.
+It is not particularly bad, but if you read/write a lot of variables in the blackboard (which easily happens with a large behavior tree), you would pay the cost of constructing a string and looking up HashMap every time.
+
+One of the tiny-behavior-tree's goals is to address this issue by passing variables with function call arguments.
+Why would you pay the cost of looking up HashMap if you already know the address of the variable?
+
+Also, the blackboard is not very scalable, since it is essentially a huge table of global variables.
+Although there is sub-blackboards in subtrees, it is difficult to keep track of similar to scripting language's stack frame without proper debugging tools.
+
+I might experiment with non-string keys to make it more efficient, but the nature of the variables need to be handled dynamically in uniformly typeds nodes.
