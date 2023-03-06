@@ -407,3 +407,135 @@ fn test_retry_fail() {
     ) {}
     assert_eq!(res, vec![true; 3]);
 }
+
+#[test]
+fn test_if_node() {
+    let mut tree = IfNode::default();
+    tree.add_child(Box::new(AlwaysSucceed), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+        .unwrap();
+
+    let mut ctx = Context::default();
+
+    let mut res = vec![];
+    assert_eq!(
+        tree.tick(
+            &mut |v| {
+                res.push(*v.downcast_ref::<bool>().unwrap());
+                None
+            },
+            &mut ctx,
+        ),
+        BehaviorResult::Fail
+    );
+    assert_eq!(res, vec![true; 1]);
+}
+
+#[test]
+fn test_if_node_fail() {
+    let mut tree = IfNode::default();
+    tree.add_child(Box::new(AlwaysFail), BBMap::new()).unwrap();
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(Append::<false>), BBMap::new())
+        .unwrap();
+
+    let mut ctx = Context::default();
+
+    let mut res = vec![];
+    assert_eq!(
+        tree.tick(
+            &mut |v| {
+                res.push(*v.downcast_ref::<bool>().unwrap());
+                None
+            },
+            &mut ctx,
+        ),
+        BehaviorResult::Success
+    );
+    assert_eq!(res, vec![false; 1]);
+}
+
+struct AlwaysRunning;
+
+impl BehaviorNode for AlwaysRunning {
+    fn tick(&mut self, _arg: BehaviorCallback, _ctx: &mut Context) -> BehaviorResult {
+        BehaviorResult::Running
+    }
+}
+
+#[test]
+fn test_if_node_suspend() {
+    let mut tree = IfNode::default();
+    tree.add_child(Box::new(AlwaysRunning), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+        .unwrap();
+
+    let mut ctx = Context::default();
+
+    let mut res = vec![];
+    assert_eq!(
+        tree.tick(
+            &mut |v| {
+                res.push(*v.downcast_ref::<bool>().unwrap());
+                None
+            },
+            &mut ctx,
+        ),
+        BehaviorResult::Running
+    );
+    assert_eq!(res, vec![]);
+}
+
+#[test]
+fn test_if_node_true_suspend() {
+    let mut tree = IfNode::default();
+    tree.add_child(Box::new(AlwaysSucceed), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(AlwaysRunning), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+        .unwrap();
+
+    let mut ctx = Context::default();
+
+    let mut res = vec![];
+    assert_eq!(
+        tree.tick(
+            &mut |v| {
+                res.push(*v.downcast_ref::<bool>().unwrap());
+                None
+            },
+            &mut ctx,
+        ),
+        BehaviorResult::Running
+    );
+    assert_eq!(res, vec![]);
+}
+
+#[test]
+fn test_if_node_false_suspend() {
+    let mut tree = IfNode::default();
+    tree.add_child(Box::new(AlwaysFail), BBMap::new()).unwrap();
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(AlwaysRunning), BBMap::new())
+        .unwrap();
+
+    let mut ctx = Context::default();
+
+    let mut res = vec![];
+    assert_eq!(
+        tree.tick(
+            &mut |v| {
+                res.push(*v.downcast_ref::<bool>().unwrap());
+                None
+            },
+            &mut ctx,
+        ),
+        BehaviorResult::Running
+    );
+    assert_eq!(res, vec![]);
+}

@@ -503,15 +503,26 @@ impl BehaviorNode for IfNode {
             res
         };
 
-        let condition_result = self.condition_result.unwrap_or_else(|| {
-            self.children
+        let condition_result = match self.condition_result {
+            Some(BehaviorResult::Running) => self
+                .children
                 .first_mut()
                 .map(&mut ticker)
-                .unwrap_or(BehaviorResult::Fail)
-        });
+                .unwrap_or(BehaviorResult::Fail),
+            Some(res) => res,
+            None => self
+                .children
+                .first_mut()
+                .map(&mut ticker)
+                .unwrap_or(BehaviorResult::Fail),
+        };
 
         // Remember the last conditional result in case the child node returns Running
         self.condition_result = Some(condition_result);
+
+        if matches!(condition_result, BehaviorResult::Running) {
+            return BehaviorResult::Running;
+        }
 
         let branch_result = match condition_result {
             BehaviorResult::Success => self
