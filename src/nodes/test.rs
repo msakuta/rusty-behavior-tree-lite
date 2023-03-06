@@ -369,6 +369,36 @@ fn test_repeat_fail() {
 }
 
 #[test]
+fn test_repeat_suspend() {
+    let mut tree = RepeatNode::default();
+    let mut seq = SequenceNode::default();
+    seq.add_child(Box::new(Append::<true>), BBMap::new())
+        .unwrap();
+    seq.add_child(Box::new(AlwaysRunning), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(seq), BBMap::new()).unwrap();
+
+    let mut ctx = Context::default();
+    ctx.set::<usize>("n", 3);
+
+    let mut res = vec![];
+    for _ in 0..3 {
+        assert_eq!(
+            tree.tick(
+                &mut |v| {
+                    res.push(*v.downcast_ref::<bool>().unwrap());
+                    None
+                },
+                &mut ctx,
+            ),
+            BehaviorResult::Running
+        );
+    }
+    // Although we repeat 3 times, the result should contain only 1 `true`, since it is suspended.
+    assert_eq!(res, vec![true]);
+}
+
+#[test]
 fn test_retry() {
     let mut tree = RetryNode::default();
     tree.add_child(Box::new(Append::<true>), BBMap::new())
