@@ -368,6 +368,63 @@ fn test_repeat_fail() {
     assert_eq!(res, vec![true]);
 }
 
+struct Countdown<const C: usize>(usize);
+
+impl<const C: usize> BehaviorNode for Countdown<C> {
+    fn tick(&mut self, _arg: BehaviorCallback, _ctx: &mut Context) -> BehaviorResult {
+        dbg!(self.0);
+        if self.0 == 0 {
+            self.0 = C;
+            BehaviorResult::Success
+        } else {
+            self.0 -= 1;
+            BehaviorResult::Fail
+        }
+    }
+}
+
+impl<const C: usize> std::ops::Not for Countdown<C> {
+    type Output = InverterNode;
+
+    fn not(self) -> Self::Output {
+        let mut not = InverterNode::default();
+        not.add_child(Box::new(self), BBMap::new()).unwrap();
+        not
+    }
+}
+
+#[test]
+fn test_repeat_break() {
+    let mut tree = FallbackNode::default();
+    let mut repeat = RepeatNode::default();
+    repeat
+        .add_child(Box::new(!Countdown::<2>(2)), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(repeat), BBMap::new()).unwrap();
+    tree.add_child(Box::new(Append::<true>), BBMap::new())
+        .unwrap();
+
+    let mut ctx = Context::default();
+    ctx.set::<usize>("n", 3);
+
+    use BehaviorResult::*;
+
+    let mut res = vec![];
+    for expected in [Running, Running, Success, Running, Running, Success] {
+        assert_eq!(
+            tree.tick(
+                &mut |v| {
+                    res.push(*v.downcast_ref::<bool>().unwrap());
+                    None
+                },
+                &mut ctx,
+            ),
+            expected
+        );
+    }
+    assert_eq!(res, vec![true; 2]);
+}
+
 #[test]
 fn test_repeat_suspend() {
     let mut tree = RepeatNode::default();
@@ -436,6 +493,68 @@ fn test_retry_fail() {
         &mut ctx,
     ) {}
     assert_eq!(res, vec![true; 3]);
+}
+
+#[test]
+fn test_retry_break() {
+    let mut tree = SequenceNode::default();
+    let mut retry = RetryNode::default();
+    retry
+        .add_child(Box::new(Countdown::<2>(2)), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(retry), BBMap::new()).unwrap();
+    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+        .unwrap();
+
+    let mut ctx = Context::default();
+    ctx.set::<usize>("n", 3);
+
+    use BehaviorResult::*;
+
+    let mut res = vec![];
+    for expected in [Running, Running, Fail, Running, Running, Fail] {
+        assert_eq!(
+            tree.tick(
+                &mut |v| {
+                    res.push(*v.downcast_ref::<bool>().unwrap());
+                    None
+                },
+                &mut ctx,
+            ),
+            expected
+        );
+    }
+    assert_eq!(res, vec![true; 2]);
+}
+
+#[test]
+fn test_retry_suspend() {
+    let mut tree = RetryNode::default();
+    let mut seq = SequenceNode::default();
+    seq.add_child(Box::new(Append::<true>), BBMap::new())
+        .unwrap();
+    seq.add_child(Box::new(AlwaysRunning), BBMap::new())
+        .unwrap();
+    tree.add_child(Box::new(seq), BBMap::new()).unwrap();
+
+    let mut ctx = Context::default();
+    ctx.set::<usize>("n", 3);
+
+    let mut res = vec![];
+    for _ in 0..3 {
+        assert_eq!(
+            tree.tick(
+                &mut |v| {
+                    res.push(*v.downcast_ref::<bool>().unwrap());
+                    None
+                },
+                &mut ctx,
+            ),
+            BehaviorResult::Running
+        );
+    }
+    // Although we repeat 3 times, the result should contain only 1 `true`, since it is suspended.
+    assert_eq!(res, vec![true]);
 }
 
 #[test]

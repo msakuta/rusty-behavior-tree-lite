@@ -428,11 +428,16 @@ impl BehaviorNode for RetryNode {
             std::mem::swap(&mut ctx.blackboard_map, &mut child.blackboard_map);
             let res = child.node.tick(arg, ctx);
             std::mem::swap(&mut ctx.blackboard_map, &mut child.blackboard_map);
-            if let BehaviorResult::Fail = res {
-                self.n = Some(current - 1);
-                return BehaviorResult::Running;
-            } else {
-                return res;
+            match res {
+                BehaviorResult::Fail => {
+                    self.n = Some(current - 1);
+                    return BehaviorResult::Running;
+                }
+                BehaviorResult::Running => return res,
+                _ => {
+                    self.n = None;
+                    return res;
+                }
             }
         }
         BehaviorResult::Fail
