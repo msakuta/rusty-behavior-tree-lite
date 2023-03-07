@@ -34,7 +34,9 @@ tree sub = Fallback {
     let mut values = vec![];
     let result = tree.tick(
         &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            if let Some(val) = val.downcast_ref::<i32>() {
+                values.push(*val)
+            }
             None
         },
         &mut Context::default(),
@@ -76,7 +78,9 @@ SendToArg (input <- input)
     let mut values = vec![];
     let result = tree.tick(
         &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            if let Some(val) = val.downcast_ref::<i32>() {
+                values.push(*val)
+            }
             None
         },
         &mut Context::default(),
@@ -120,7 +124,9 @@ Double (input <- input, output -> output)
     let mut values = vec![];
     let result = tree.tick(
         &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            if let Some(val) = val.downcast_ref::<i32>() {
+                values.push(*val)
+            }
             None
         },
         &mut Context::default(),
@@ -187,7 +193,9 @@ tree main = Sequence {
     let mut values = vec![];
     let result = tree.tick(
         &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            if let Some(val) = val.downcast_ref::<i32>() {
+                values.push(*val)
+            }
             None
         },
         &mut Context::default(),
@@ -217,7 +225,9 @@ tree main = Sequence {
     let mut values = vec![];
     let result = tree.tick(
         &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            if let Some(val) = val.downcast_ref::<i32>() {
+                values.push(*val)
+            }
             None
         },
         &mut Context::default(),
@@ -249,7 +259,9 @@ tree main = Sequence {
     let mut values = vec![];
     let result = tree.tick(
         &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            if let Some(val) = val.downcast_ref::<i32>() {
+                values.push(*val)
+            }
             None
         },
         &mut Context::default(),
@@ -279,7 +291,9 @@ tree main = Sequence {
     let mut values = vec![];
     let result = tree.tick(
         &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            if let Some(val) = val.downcast_ref::<i32>() {
+                values.push(*val)
+            }
             None
         },
         &mut Context::default(),
@@ -311,7 +325,9 @@ tree main = Sequence {
     let mut values = vec![];
     let result = tree.tick(
         &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            if let Some(val) = val.downcast_ref::<i32>() {
+                values.push(*val)
+            }
             None
         },
         &mut Context::default(),
@@ -342,7 +358,9 @@ tree main = Sequence {
     let mut values = vec![];
     let result = tree.tick(
         &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            if let Some(val) = val.downcast_ref::<i32>() {
+                values.push(*val)
+            }
             None
         },
         &mut Context::default(),
@@ -373,7 +391,9 @@ tree main = Sequence {
     let mut values = vec![];
     let result = tree.tick(
         &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            if let Some(val) = val.downcast_ref::<i32>() {
+                values.push(*val)
+            }
             None
         },
         &mut Context::default(),
@@ -404,7 +424,9 @@ tree main = Sequence {
     let mut values = vec![];
     let result = tree.tick(
         &mut |val| {
-            val.downcast_ref::<i32>().map(|val| values.push(*val));
+            if let Some(val) = val.downcast_ref::<i32>() {
+                values.push(*val)
+            }
             None
         },
         &mut Context::default(),

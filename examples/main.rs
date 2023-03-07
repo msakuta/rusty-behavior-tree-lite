@@ -37,7 +37,7 @@ impl BehaviorNode for PrintBodyNode {
         if let Some(body) = ctx.get::<Body>(*BODY_SYM) {
             let left_arm = body.left_arm.clone();
             let right_arm = body.right_arm.clone();
-            println!("PrintBodyNode: {:?}", body);
+            println!("PrintBodyNode: {body:?}");
             ctx.set(*LEFT_ARM_SYM, left_arm);
             ctx.set(*RIGHT_ARM_SYM, right_arm);
             BehaviorResult::Success

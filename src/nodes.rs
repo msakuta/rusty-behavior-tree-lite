@@ -85,18 +85,10 @@ impl BehaviorNode for SubtreeNode {
     }
 }
 
+#[derive(Default)]
 pub struct SequenceNode {
     children: Vec<BehaviorNodeContainer>,
     current_child: Option<usize>,
-}
-
-impl Default for SequenceNode {
-    fn default() -> Self {
-        Self {
-            children: vec![],
-            current_child: None,
-        }
-    }
 }
 
 impl BehaviorNode for SequenceNode {
@@ -132,14 +124,9 @@ impl BehaviorNode for SequenceNode {
     }
 }
 
+#[derive(Default)]
 pub struct ReactiveSequenceNode {
     children: Vec<BehaviorNodeContainer>,
-}
-
-impl Default for ReactiveSequenceNode {
-    fn default() -> Self {
-        Self { children: vec![] }
-    }
 }
 
 impl BehaviorNode for ReactiveSequenceNode {
@@ -171,18 +158,10 @@ impl BehaviorNode for ReactiveSequenceNode {
     }
 }
 
+#[derive(Default)]
 pub struct FallbackNode {
     children: Vec<BehaviorNodeContainer>,
     current_child: Option<usize>,
-}
-
-impl Default for FallbackNode {
-    fn default() -> Self {
-        Self {
-            children: vec![],
-            current_child: None,
-        }
-    }
 }
 
 impl BehaviorNode for FallbackNode {
@@ -218,14 +197,9 @@ impl BehaviorNode for FallbackNode {
     }
 }
 
+#[derive(Default)]
 pub struct ReactiveFallbackNode {
     children: Vec<BehaviorNodeContainer>,
-}
-
-impl Default for ReactiveFallbackNode {
-    fn default() -> Self {
-        Self { children: vec![] }
-    }
 }
 
 impl BehaviorNode for ReactiveFallbackNode {
@@ -351,7 +325,7 @@ impl BehaviorNode for InverterNode {
     }
 }
 
-const N: Lazy<Symbol> = Lazy::new(|| "n".into());
+static N: Lazy<Symbol> = Lazy::new(|| "n".into());
 
 #[derive(Default)]
 pub(super) struct RepeatNode {

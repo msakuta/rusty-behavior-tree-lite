@@ -123,7 +123,7 @@ impl<'e, E> Context<'e, E> {
                     if self.strict {
                         panic!("Port {:?} is not specified as output or inout port", key);
                     }
-                    return None;
+                    None
                 }
             }
             Some(BlackboardValue::Literal(_)) => panic!("Cannot write to a literal!"),

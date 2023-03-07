@@ -28,21 +28,15 @@ impl Default for Registry {
             node_types: HashMap::new(),
             key_names: HashMap::new(),
         };
-        ret.register("Sequence", boxify(|| SequenceNode::default()));
-        ret.register(
-            "ReactiveSequence",
-            boxify(|| ReactiveSequenceNode::default()),
-        );
-        ret.register("Fallback", boxify(|| FallbackNode::default()));
-        ret.register(
-            "ReactiveFallback",
-            boxify(|| ReactiveFallbackNode::default()),
-        );
-        ret.register("ForceSuccess", boxify(|| ForceSuccessNode::default()));
-        ret.register("ForceFailure", boxify(|| ForceFailureNode::default()));
-        ret.register("Inverter", boxify(|| InverterNode::default()));
-        ret.register("Repeat", boxify(|| RepeatNode::default()));
-        ret.register("Retry", boxify(|| RetryNode::default()));
+        ret.register("Sequence", boxify(SequenceNode::default));
+        ret.register("ReactiveSequence", boxify(ReactiveSequenceNode::default));
+        ret.register("Fallback", boxify(FallbackNode::default));
+        ret.register("ReactiveFallback", boxify(ReactiveFallbackNode::default));
+        ret.register("ForceSuccess", boxify(ForceSuccessNode::default));
+        ret.register("ForceFailure", boxify(ForceFailureNode::default));
+        ret.register("Inverter", boxify(InverterNode::default));
+        ret.register("Repeat", boxify(RepeatNode::default));
+        ret.register("Retry", boxify(RetryNode::default));
         ret.register("IsTrue", boxify(|| IsTrueNode));
         ret.register("if", boxify(IfNode::default));
         ret.register("SetBool", boxify(|| SetBoolNode));

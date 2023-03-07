@@ -59,21 +59,18 @@ impl Display for LoadError {
         match self {
             Self::MissingTree => write!(fmt, "The main tree does not exist"),
             Self::MissingNode(node) => {
-                write!(fmt, "Node type or subtree name not found {:?}", node)
+                write!(fmt, "Node type or subtree name not found {node:?}")
             }
             Self::AddChildError(e, node) => {
                 e.fmt(fmt)?;
-                write!(fmt, " to {}", node)
+                write!(fmt, " to {node}")
             }
-            Self::PortUnmatch { node, port } => write!(
-                fmt,
-                "Port {:?} was not provided by the node {:?}",
-                port, node
-            ),
+            Self::PortUnmatch { node, port } => {
+                write!(fmt, "Port {port:?} was not provided by the node {node:?}")
+            }
             Self::PortIOUnmatch { node, port } => write!(
                 fmt,
-                "Port {:?} on node {:?} has wrong input/output indication",
-                port, node
+                "Port {port:?} on node {node:?} has wrong input/output indication"
             ),
             Self::InfiniteRecursion { node } => write!(
                 fmt,

@@ -21,7 +21,7 @@ pub fn load(
         .tree_defs
         .iter()
         .find(|tree| tree.name == "main")
-        .ok_or_else(|| LoadError::MissingTree)?;
+        .ok_or(LoadError::MissingTree)?;
 
     let top = TreeStack {
         name: "main",

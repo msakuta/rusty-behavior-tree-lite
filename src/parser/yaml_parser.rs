@@ -2,21 +2,20 @@ use crate::{error::LoadYamlError, BBMap, BehaviorNode, BlackboardValue, PortType
 use serde_yaml::Value;
 use std::collections::HashMap;
 
-fn recurse_parse(
-    value: &serde_yaml::Value,
-    reg: &Registry,
-) -> Result<Option<(Box<dyn BehaviorNode>, BBMap)>, LoadYamlError> {
+type ParseResult = Result<Option<(Box<dyn BehaviorNode>, BBMap)>, LoadYamlError>;
+
+fn recurse_parse(value: &serde_yaml::Value, reg: &Registry) -> ParseResult {
     let mut node = if let Some(node) =
         value
             .get("type")
             .and_then(|value| value.as_str())
             .and_then(|value| {
-                eprintln!("Returning {}", value);
+                eprintln!("Returning {value}");
                 reg.build(value)
             }) {
         node
     } else {
-        eprintln!("Type does not exist in value {:?}", value);
+        eprintln!("Type does not exist in value {value:?}");
         return Ok(None);
     };
 
@@ -24,7 +23,7 @@ fn recurse_parse(
         for child in children {
             if let Some(built_child) = recurse_parse(child, reg)? {
                 node.add_child(built_child.0, built_child.1)
-                    .map_err(|e| LoadYamlError::AddChildError(e))?;
+                    .map_err(LoadYamlError::AddChildError)?;
             }
         }
     }
@@ -63,7 +62,7 @@ pub fn load_yaml(
         // }
 
         if let Some(Value::Mapping(roots)) = root.get(&Value::from("behavior_tree")) {
-            return Ok(roots
+            return roots
                 .iter()
                 .map(|(name, value)| {
                     Ok((
@@ -73,7 +72,7 @@ pub fn load_yaml(
                             .ok_or_else(|| LoadYamlError::Missing)?,
                     ))
                 })
-                .collect::<Result<_, LoadYamlError>>()?);
+                .collect::<Result<_, LoadYamlError>>();
         }
     }
 
