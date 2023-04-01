@@ -1,5 +1,5 @@
 use super::*;
-use crate::{boxify, error::LoadError, BehaviorResult, Context};
+use crate::{boxify, error::LoadError, BehaviorNode, BehaviorResult, Context};
 
 struct PrintNode;
 

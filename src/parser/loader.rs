@@ -2,9 +2,9 @@ use std::collections::{HashMap, HashSet};
 
 use super::nom_parser::{TreeDef, TreeSource};
 use crate::{
-    error::LoadError,
+    error::{AddChildError, LoadError},
     nodes::{IsTrueNode, SubtreeNode, INPUT},
-    BBMap, BehaviorNode, PortSpec, PortType, Registry, Symbol,
+    BBMap, BehaviorNodeContainer, NumChildren, PortSpec, PortType, Registry, Symbol,
 };
 
 /// Instantiate a behavior tree from a AST of a tree.
@@ -16,7 +16,7 @@ pub fn load(
     tree_source: &TreeSource,
     registry: &Registry,
     check_ports: bool,
-) -> Result<Box<dyn BehaviorNode>, LoadError> {
+) -> Result<BehaviorNodeContainer, LoadError> {
     let main = tree_source
         .tree_defs
         .iter()
@@ -94,9 +94,13 @@ fn load_recurse(
     check_ports: bool,
     parent_stack: &TreeStack,
     vars: &mut HashSet<Symbol>,
-) -> Result<Box<dyn BehaviorNode>, LoadError> {
+) -> Result<BehaviorNodeContainer, LoadError> {
     let mut ret = if let Some(ret) = registry.build(parent.ty) {
-        ret
+        BehaviorNodeContainer {
+            node: ret,
+            blackboard_map: HashMap::new(),
+            child_nodes: vec![],
+        }
     } else {
         let tree = tree_source
             .tree_defs
@@ -127,17 +131,20 @@ fn load_recurse(
             &tree_stack,
             &mut vars,
         )?;
-        Box::new(SubtreeNode::new(
-            loaded_subtree,
-            HashMap::new(),
-            tree.ports
-                .iter()
-                .map(|port| PortSpec {
-                    key: port.name.into(),
-                    ty: port.direction,
-                })
-                .collect(),
-        ))
+        BehaviorNodeContainer {
+            node: Box::new(SubtreeNode::new(
+                HashMap::new(),
+                tree.ports
+                    .iter()
+                    .map(|port| PortSpec {
+                        key: port.name.into(),
+                        ty: port.direction,
+                    })
+                    .collect(),
+            )),
+            blackboard_map: HashMap::new(),
+            child_nodes: vec![loaded_subtree],
+        }
     };
 
     // "Hoist" declarations
@@ -153,7 +160,7 @@ fn load_recurse(
                     *INPUT,
                     crate::BlackboardValue::Ref(child.ty.into(), PortType::Input),
                 );
-                Some((Box::new(IsTrueNode) as Box<dyn BehaviorNode>, bbmap))
+                Some(BehaviorNodeContainer::new(Box::new(IsTrueNode), bbmap))
             } else {
                 None
             }
@@ -162,7 +169,7 @@ fn load_recurse(
         };
 
         if new_node.is_none() {
-            let child_node = load_recurse(
+            let mut child_node = load_recurse(
                 child,
                 registry,
                 tree_source,
@@ -170,7 +177,7 @@ fn load_recurse(
                 parent_stack,
                 vars,
             )?;
-            let provided_ports = child_node.provided_ports();
+            let provided_ports = child_node.node.provided_ports();
             let mut bbmap = BBMap::new();
             for entry in child.port_maps.iter() {
                 if check_ports {
@@ -200,12 +207,19 @@ fn load_recurse(
                     },
                 );
             }
-            new_node = Some((child_node, bbmap));
+            child_node.blackboard_map = bbmap;
+            new_node = Some(child_node);
         }
 
-        if let Some((new_node, bbmap)) = new_node {
-            ret.add_child(new_node, bbmap)
-                .map_err(|e| LoadError::AddChildError(e, parent.ty.to_string()))?;
+        if let Some(new_node) = new_node {
+            if NumChildren::Finite(ret.child_nodes.len()) < ret.node.num_children() {
+                ret.child_nodes.push(new_node);
+            } else {
+                return Err(LoadError::AddChildError(
+                    AddChildError::TooManyNodes,
+                    parent.ty.to_string(),
+                ));
+            }
         }
     }
 

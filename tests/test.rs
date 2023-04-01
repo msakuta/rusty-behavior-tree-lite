@@ -1,8 +1,10 @@
 // use std::convert::From;
 use behavior_tree_lite::{
-    hash_map, BehaviorCallback, BehaviorNode, BehaviorResult, Context, FallbackNode, SequenceNode,
-    Symbol,
+    BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Context, FallbackNode,
+    SequenceNode, Symbol,
 };
+
+type BNContainer = BehaviorNodeContainer;
 
 struct CheckMeNode;
 
@@ -39,14 +41,14 @@ impl BehaviorNode for AlwaysFail {
 
 #[test]
 fn test_sequence() {
-    let mut seq = SequenceNode::default();
-    seq.add_child(Box::new(AlwaysSucceed), hash_map!()).unwrap();
-    seq.add_child(Box::new(AlwaysSucceed), hash_map!()).unwrap();
+    let mut seq = BNContainer::new_node(SequenceNode::default());
+    seq.add_child(BNContainer::new_node(AlwaysSucceed)).unwrap();
+    seq.add_child(BNContainer::new_node(AlwaysSucceed)).unwrap();
     assert_eq!(
         seq.tick(&mut |_| None, &mut Context::default()),
         BehaviorResult::Success
     );
-    seq.add_child(Box::new(AlwaysFail), hash_map!()).unwrap();
+    seq.add_child(BNContainer::new_node(AlwaysFail)).unwrap();
     assert_eq!(
         seq.tick(&mut |_| None, &mut Context::default()),
         BehaviorResult::Fail
@@ -55,14 +57,14 @@ fn test_sequence() {
 
 #[test]
 fn test_fallback() {
-    let mut seq = FallbackNode::default();
-    seq.add_child(Box::new(AlwaysFail), hash_map!()).unwrap();
-    seq.add_child(Box::new(AlwaysFail), hash_map!()).unwrap();
+    let mut seq = BNContainer::new_node(FallbackNode::default());
+    seq.add_child(BNContainer::new_node(AlwaysFail)).unwrap();
+    seq.add_child(BNContainer::new_node(AlwaysFail)).unwrap();
     assert_eq!(
         seq.tick(&mut |_| None, &mut Context::default()),
         BehaviorResult::Fail
     );
-    seq.add_child(Box::new(AlwaysSucceed), hash_map!()).unwrap();
+    seq.add_child(BNContainer::new_node(AlwaysSucceed)).unwrap();
     assert_eq!(
         seq.tick(&mut |_| None, &mut Context::default()),
         BehaviorResult::Success

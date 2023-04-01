@@ -1,11 +1,14 @@
-use crate::{error::LoadYamlError, BBMap, BehaviorNode, BlackboardValue, PortType, Registry};
+use crate::{
+    error::{AddChildError, LoadYamlError},
+    BehaviorNode, BehaviorNodeContainer, BlackboardValue, NumChildren, PortType, Registry,
+};
 use serde_yaml::Value;
 use std::collections::HashMap;
 
-type ParseResult = Result<Option<(Box<dyn BehaviorNode>, BBMap)>, LoadYamlError>;
+type ParseResult = Result<Option<BehaviorNodeContainer>, LoadYamlError>;
 
 fn recurse_parse(value: &serde_yaml::Value, reg: &Registry) -> ParseResult {
-    let mut node = if let Some(node) =
+    let node = if let Some(node) =
         value
             .get("type")
             .and_then(|value| value.as_str())
@@ -19,11 +22,15 @@ fn recurse_parse(value: &serde_yaml::Value, reg: &Registry) -> ParseResult {
         return Ok(None);
     };
 
+    let mut child_nodes = vec![];
     if let Some(Value::Sequence(children)) = value.get(&Value::from("children")) {
         for child in children {
             if let Some(built_child) = recurse_parse(child, reg)? {
-                node.add_child(built_child.0, built_child.1)
-                    .map_err(LoadYamlError::AddChildError)?;
+                if NumChildren::Finite(child_nodes.len()) < node.num_children() {
+                    child_nodes.push(built_child)
+                } else {
+                    return Err(LoadYamlError::AddChildError(AddChildError::TooManyNodes));
+                }
             }
         }
     }
@@ -44,7 +51,11 @@ fn recurse_parse(value: &serde_yaml::Value, reg: &Registry) -> ParseResult {
         HashMap::new()
     };
 
-    Ok(Some((node, blackboard_map)))
+    Ok(Some(BehaviorNodeContainer {
+        node,
+        blackboard_map,
+        child_nodes,
+    }))
 }
 
 pub fn load_yaml(
@@ -68,7 +79,7 @@ pub fn load_yaml(
                     Ok((
                         name.as_str().ok_or(LoadYamlError::Missing)?.to_string(),
                         recurse_parse(value, reg)?
-                            .map(|v| v.0)
+                            .map(|v| v.node)
                             .ok_or_else(|| LoadYamlError::Missing)?,
                     ))
                 })

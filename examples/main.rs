@@ -2,7 +2,7 @@ use ::behavior_tree_lite::{
     hash_map, BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context, Lazy,
     SequenceNode, Symbol,
 };
-use behavior_tree_lite::PortType;
+use behavior_tree_lite::{BehaviorNodeContainer, PortType};
 
 #[derive(Clone, Debug)]
 struct Arm {
@@ -60,26 +60,29 @@ fn main() {
     let mut ctx = Context::default();
     ctx.set("body", body);
 
-    let mut root = SequenceNode::default();
+    let mut root = BehaviorNodeContainer::new_node(SequenceNode::default());
 
-    root.add_child(Box::new(PrintBodyNode), hash_map!())
-        .unwrap();
+    root.add_child(BehaviorNodeContainer::new(
+        Box::new(PrintBodyNode),
+        hash_map!(),
+    ))
+    .unwrap();
 
-    let mut print_arms = SequenceNode::default();
+    let mut print_arms = BehaviorNodeContainer::new_node(SequenceNode::default());
     print_arms
-        .add_child(
+        .add_child(BehaviorNodeContainer::new(
             Box::new(PrintArmNode),
             hash_map!("arm" => BlackboardValue::Ref("left_arm".into(), PortType::InOut)),
-        )
+        ))
         .unwrap();
     print_arms
-        .add_child(
+        .add_child(BehaviorNodeContainer::new(
             Box::new(PrintArmNode),
             hash_map!("arm" => BlackboardValue::Ref("right_arm".into(), PortType::InOut)),
-        )
+        ))
         .unwrap();
 
-    root.add_child(Box::new(print_arms), hash_map!()).unwrap();
+    root.add_child(print_arms).unwrap();
 
     root.tick(&mut |_| None, &mut ctx);
 

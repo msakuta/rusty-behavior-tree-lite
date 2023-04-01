@@ -746,6 +746,23 @@ pub type Blackboard = HashMap<Symbol, Rc<dyn Any>>;
 pub type BBMap = HashMap<Symbol, BlackboardValue>;
 pub type BehaviorCallback<'a> = &'a mut dyn FnMut(&dyn Any) -> Option<Box<dyn Any>>;
 
+#[derive(PartialEq, Eq)]
+pub enum NumChildren {
+    Finite(usize),
+    Infinite,
+}
+
+impl PartialOrd for NumChildren {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(match (self, other) {
+            (NumChildren::Finite(_), NumChildren::Infinite) => std::cmp::Ordering::Less,
+            (NumChildren::Infinite, NumChildren::Finite(_)) => std::cmp::Ordering::Greater,
+            (NumChildren::Finite(lhs), NumChildren::Finite(rhs)) => lhs.cmp(rhs),
+            (NumChildren::Infinite, NumChildren::Infinite) => return None,
+        })
+    }
+}
+
 pub trait BehaviorNode {
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![]
@@ -753,14 +770,15 @@ pub trait BehaviorNode {
 
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult;
 
-    fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: BBMap) -> AddChildResult {
-        Err(AddChildError::TooManyNodes)
+    fn num_children(&self) -> NumChildren {
+        NumChildren::Finite(0)
     }
 }
 
 pub struct BehaviorNodeContainer {
     node: Box<dyn BehaviorNode>,
     blackboard_map: HashMap<Symbol, BlackboardValue>,
+    child_nodes: Vec<BehaviorNodeContainer>,
 }
 
 impl BehaviorNodeContainer {
@@ -771,6 +789,39 @@ impl BehaviorNodeContainer {
         Self {
             node,
             blackboard_map,
+            child_nodes: vec![],
+        }
+    }
+
+    pub fn new_raw(node: Box<dyn BehaviorNode>) -> Self {
+        Self {
+            node,
+            blackboard_map: HashMap::new(),
+            child_nodes: vec![],
+        }
+    }
+
+    pub fn new_node(node: impl BehaviorNode + 'static) -> Self {
+        Self {
+            node: Box::new(node),
+            blackboard_map: HashMap::new(),
+            child_nodes: vec![],
+        }
+    }
+
+    pub fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        std::mem::swap(&mut self.blackboard_map, &mut ctx.blackboard_map);
+        let res = self.node.tick(arg, ctx);
+        std::mem::swap(&mut self.blackboard_map, &mut ctx.blackboard_map);
+        res
+    }
+
+    pub fn add_child(&mut self, child: BehaviorNodeContainer) -> AddChildResult {
+        if NumChildren::Finite(self.child_nodes.len()) < self.node.num_children() {
+            self.child_nodes.push(child);
+            Ok(())
+        } else {
+            Err(AddChildError::TooManyNodes)
         }
     }
 }

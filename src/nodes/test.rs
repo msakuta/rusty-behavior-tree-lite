@@ -1,4 +1,5 @@
 use super::*;
+type BNContainer = BehaviorNodeContainer;
 
 struct Append<const V: bool = true>;
 
@@ -18,10 +19,10 @@ fn test_sequence() {
         None
     };
 
-    let mut tree = SequenceNode::default();
-    tree.add_child(Box::new(Append::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(SequenceNode::default());
+    tree.add_child(BNContainer::new_node(Append::<true>))
         .unwrap();
-    tree.add_child(Box::new(Append::<false>), BBMap::new())
+    tree.add_child(BNContainer::new_node(Append::<false>))
         .unwrap();
 
     assert_eq!(
@@ -31,10 +32,10 @@ fn test_sequence() {
 
     assert_eq!(res, vec![true, false]);
 
-    let mut tree = SequenceNode::default();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(SequenceNode::default());
+    tree.add_child(BNContainer::new_node(AppendAndFail::<true>))
         .unwrap();
-    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new())
+    tree.add_child(BNContainer::new_node(AppendAndFail::<false>))
         .unwrap();
 
     assert_eq!(
@@ -55,11 +56,11 @@ impl BehaviorNode for Suspend {
 fn test_sequence_suspend() {
     let mut res = vec![];
 
-    let mut tree = SequenceNode::default();
-    tree.add_child(Box::new(Append::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(SequenceNode::default());
+    tree.add_child(BNContainer::new_node(Append::<true>))
         .unwrap();
-    tree.add_child(Box::new(Suspend), BBMap::new()).unwrap();
-    tree.add_child(Box::new(Append::<false>), BBMap::new())
+    tree.add_child(BNContainer::new_node(Suspend)).unwrap();
+    tree.add_child(BNContainer::new_node(Append::<false>))
         .unwrap();
 
     assert_eq!(
@@ -91,11 +92,11 @@ fn test_sequence_suspend() {
 fn test_reactive_sequence_suspend() {
     let mut res = vec![];
 
-    let mut tree = ReactiveSequenceNode::default();
-    tree.add_child(Box::new(Append::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(ReactiveSequenceNode::default());
+    tree.add_child(BNContainer::new_node(Append::<true>))
         .unwrap();
-    tree.add_child(Box::new(Suspend), BBMap::new()).unwrap();
-    tree.add_child(Box::new(Append::<false>), BBMap::new())
+    tree.add_child(BNContainer::new_node(Suspend)).unwrap();
+    tree.add_child(BNContainer::new_node(Append::<false>))
         .unwrap();
 
     assert_eq!(
@@ -141,10 +142,10 @@ fn test_fallback() {
         None
     };
 
-    let mut tree = FallbackNode::default();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(FallbackNode::default());
+    tree.add_child(BNContainer::new_node(AppendAndFail::<true>))
         .unwrap();
-    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new())
+    tree.add_child(BNContainer::new_node(AppendAndFail::<false>))
         .unwrap();
 
     assert_eq!(
@@ -154,10 +155,10 @@ fn test_fallback() {
 
     assert_eq!(res, vec![true, false]);
 
-    let mut tree = SequenceNode::default();
-    tree.add_child(Box::new(Append::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(SequenceNode::default());
+    tree.add_child(BNContainer::new_node(Append::<true>))
         .unwrap();
-    tree.add_child(Box::new(Append::<false>), BBMap::new())
+    tree.add_child(BNContainer::new_node(Append::<false>))
         .unwrap();
 }
 
@@ -165,11 +166,11 @@ fn test_fallback() {
 fn test_fallback_suspend() {
     let mut res = vec![];
 
-    let mut tree = FallbackNode::default();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(FallbackNode::default());
+    tree.add_child(BNContainer::new_node(AppendAndFail::<true>))
         .unwrap();
-    tree.add_child(Box::new(Suspend), BBMap::new()).unwrap();
-    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new())
+    tree.add_child(BNContainer::new_node(Suspend)).unwrap();
+    tree.add_child(BNContainer::new_node(AppendAndFail::<false>))
         .unwrap();
 
     assert_eq!(
@@ -201,11 +202,11 @@ fn test_fallback_suspend() {
 fn test_reactive_fallback_suspend() {
     let mut res = vec![];
 
-    let mut tree = ReactiveFallbackNode::default();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(ReactiveFallbackNode::default());
+    tree.add_child(BNContainer::new_node(AppendAndFail::<true>))
         .unwrap();
-    tree.add_child(Box::new(Suspend), BBMap::new()).unwrap();
-    tree.add_child(Box::new(AppendAndFail::<false>), BBMap::new())
+    tree.add_child(BNContainer::new_node(Suspend)).unwrap();
+    tree.add_child(BNContainer::new_node(AppendAndFail::<false>))
         .unwrap();
 
     assert_eq!(
@@ -251,9 +252,9 @@ impl BehaviorNode for AlwaysFail {
 
 #[test]
 fn test_force_success() {
-    let mut success_success = ForceSuccessNode::default();
+    let mut success_success = BNContainer::new_node(ForceSuccessNode::default());
     success_success
-        .add_child(Box::new(AlwaysSucceed), BBMap::new())
+        .add_child(BNContainer::new_node(AlwaysSucceed))
         .unwrap();
 
     assert_eq!(
@@ -261,9 +262,9 @@ fn test_force_success() {
         success_success.tick(&mut |_| None, &mut Context::default())
     );
 
-    let mut success_failure = ForceSuccessNode::default();
+    let mut success_failure = BNContainer::new_node(ForceSuccessNode::default());
     success_failure
-        .add_child(Box::new(AlwaysFail), BBMap::new())
+        .add_child(BNContainer::new_node(AlwaysFail))
         .unwrap();
 
     assert_eq!(
@@ -274,9 +275,9 @@ fn test_force_success() {
 
 #[test]
 fn test_force_failure() {
-    let mut failure_success = ForceFailureNode::default();
+    let mut failure_success = BNContainer::new_node(ForceFailureNode::default());
     failure_success
-        .add_child(Box::new(AlwaysSucceed), BBMap::new())
+        .add_child(BNContainer::new_node(AlwaysSucceed))
         .unwrap();
 
     assert_eq!(
@@ -284,9 +285,9 @@ fn test_force_failure() {
         failure_success.tick(&mut |_| None, &mut Context::default())
     );
 
-    let mut failure_failure = ForceFailureNode::default();
+    let mut failure_failure = BNContainer::new_node(ForceFailureNode::default());
     failure_failure
-        .add_child(Box::new(AlwaysFail), BBMap::new())
+        .add_child(BNContainer::new_node(AlwaysFail))
         .unwrap();
 
     assert_eq!(
@@ -297,9 +298,9 @@ fn test_force_failure() {
 
 #[test]
 fn test_inverter() {
-    let mut invert_success = InverterNode::default();
+    let mut invert_success = BNContainer::new_node(InverterNode::default());
     invert_success
-        .add_child(Box::new(AlwaysSucceed), BBMap::new())
+        .add_child(BNContainer::new_node(AlwaysSucceed))
         .unwrap();
 
     assert_eq!(
@@ -307,9 +308,9 @@ fn test_inverter() {
         invert_success.tick(&mut |_| None, &mut Context::default())
     );
 
-    let mut invert_failure = InverterNode::default();
+    let mut invert_failure = BNContainer::new_node(InverterNode::default());
     invert_failure
-        .add_child(Box::new(AlwaysFail), BBMap::new())
+        .add_child(BNContainer::new_node(AlwaysFail))
         .unwrap();
 
     assert_eq!(
@@ -317,9 +318,9 @@ fn test_inverter() {
         invert_failure.tick(&mut |_| None, &mut Context::default())
     );
 
-    let mut invert_running = InverterNode::default();
+    let mut invert_running = BNContainer::new_node(InverterNode::default());
     invert_running
-        .add_child(Box::new(Suspend), BBMap::new())
+        .add_child(BNContainer::new_node(Suspend))
         .unwrap();
 
     assert_eq!(
@@ -330,8 +331,8 @@ fn test_inverter() {
 
 #[test]
 fn test_repeat() {
-    let mut tree = RepeatNode::default();
-    tree.add_child(Box::new(Append::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(RepeatNode::default());
+    tree.add_child(BNContainer::new_node(Append::<true>))
         .unwrap();
 
     let mut ctx = Context::default();
@@ -350,8 +351,8 @@ fn test_repeat() {
 
 #[test]
 fn test_repeat_fail() {
-    let mut tree = RepeatNode::default();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(RepeatNode::default());
+    tree.add_child(BNContainer::new_node(AppendAndFail::<true>))
         .unwrap();
 
     let mut ctx = Context::default();
@@ -384,24 +385,22 @@ impl<const C: usize> BehaviorNode for Countdown<C> {
 }
 
 impl<const C: usize> std::ops::Not for Countdown<C> {
-    type Output = InverterNode;
+    type Output = BNContainer;
 
     fn not(self) -> Self::Output {
-        let mut not = InverterNode::default();
-        not.add_child(Box::new(self), BBMap::new()).unwrap();
+        let mut not = BNContainer::new_node(InverterNode::default());
+        not.add_child(BNContainer::new_node(self)).unwrap();
         not
     }
 }
 
 #[test]
 fn test_repeat_break() {
-    let mut tree = FallbackNode::default();
-    let mut repeat = RepeatNode::default();
-    repeat
-        .add_child(Box::new(!Countdown::<2>(2)), BBMap::new())
-        .unwrap();
-    tree.add_child(Box::new(repeat), BBMap::new()).unwrap();
-    tree.add_child(Box::new(Append::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(FallbackNode::default());
+    let mut repeat = BNContainer::new_node(RepeatNode::default());
+    repeat.add_child(!Countdown::<2>(2)).unwrap();
+    tree.add_child(repeat).unwrap();
+    tree.add_child(BNContainer::new_node(Append::<true>))
         .unwrap();
 
     let mut ctx = Context::default();
@@ -427,13 +426,12 @@ fn test_repeat_break() {
 
 #[test]
 fn test_repeat_suspend() {
-    let mut tree = RepeatNode::default();
-    let mut seq = SequenceNode::default();
-    seq.add_child(Box::new(Append::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(RepeatNode::default());
+    let mut seq = BNContainer::new_node(SequenceNode::default());
+    seq.add_child(BNContainer::new_node(Append::<true>))
         .unwrap();
-    seq.add_child(Box::new(AlwaysRunning), BBMap::new())
-        .unwrap();
-    tree.add_child(Box::new(seq), BBMap::new()).unwrap();
+    seq.add_child(BNContainer::new_node(AlwaysRunning)).unwrap();
+    tree.add_child(seq).unwrap();
 
     let mut ctx = Context::default();
     ctx.set::<usize>("n", 3);
@@ -457,8 +455,8 @@ fn test_repeat_suspend() {
 
 #[test]
 fn test_retry() {
-    let mut tree = RetryNode::default();
-    tree.add_child(Box::new(Append::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(RetryNode::default());
+    tree.add_child(BNContainer::new_node(Append::<true>))
         .unwrap();
 
     let mut ctx = Context::default();
@@ -477,8 +475,8 @@ fn test_retry() {
 
 #[test]
 fn test_retry_fail() {
-    let mut tree = RetryNode::default();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(RetryNode::default());
+    tree.add_child(BNContainer::new_node(AppendAndFail::<true>))
         .unwrap();
 
     let mut ctx = Context::default();
@@ -497,13 +495,13 @@ fn test_retry_fail() {
 
 #[test]
 fn test_retry_break() {
-    let mut tree = SequenceNode::default();
-    let mut retry = RetryNode::default();
+    let mut tree = BNContainer::new_node(SequenceNode::default());
+    let mut retry = BNContainer::new_node(RetryNode::default());
     retry
-        .add_child(Box::new(Countdown::<2>(2)), BBMap::new())
+        .add_child(BNContainer::new_node(Countdown::<2>(2)))
         .unwrap();
-    tree.add_child(Box::new(retry), BBMap::new()).unwrap();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+    tree.add_child(retry).unwrap();
+    tree.add_child(BNContainer::new_node(AppendAndFail::<true>))
         .unwrap();
 
     let mut ctx = Context::default();
@@ -529,13 +527,12 @@ fn test_retry_break() {
 
 #[test]
 fn test_retry_suspend() {
-    let mut tree = RetryNode::default();
-    let mut seq = SequenceNode::default();
-    seq.add_child(Box::new(Append::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(RetryNode::default());
+    let mut seq = BNContainer::new_node(SequenceNode::default());
+    seq.add_child(BNContainer::new_node(Append::<true>))
         .unwrap();
-    seq.add_child(Box::new(AlwaysRunning), BBMap::new())
-        .unwrap();
-    tree.add_child(Box::new(seq), BBMap::new()).unwrap();
+    seq.add_child(BNContainer::new_node(AlwaysRunning)).unwrap();
+    tree.add_child(seq).unwrap();
 
     let mut ctx = Context::default();
     ctx.set::<usize>("n", 3);
@@ -559,10 +556,10 @@ fn test_retry_suspend() {
 
 #[test]
 fn test_if_node() {
-    let mut tree = IfNode::default();
-    tree.add_child(Box::new(AlwaysSucceed), BBMap::new())
+    let mut tree = BNContainer::new_node(IfNode::default());
+    tree.add_child(BNContainer::new_node(AlwaysSucceed))
         .unwrap();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+    tree.add_child(BNContainer::new_node(AppendAndFail::<true>))
         .unwrap();
 
     let mut ctx = Context::default();
@@ -583,11 +580,11 @@ fn test_if_node() {
 
 #[test]
 fn test_if_node_fail() {
-    let mut tree = IfNode::default();
-    tree.add_child(Box::new(AlwaysFail), BBMap::new()).unwrap();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(IfNode::default());
+    tree.add_child(BNContainer::new_node(AlwaysFail)).unwrap();
+    tree.add_child(BNContainer::new_node(AppendAndFail::<true>))
         .unwrap();
-    tree.add_child(Box::new(Append::<false>), BBMap::new())
+    tree.add_child(BNContainer::new_node(Append::<false>))
         .unwrap();
 
     let mut ctx = Context::default();
@@ -616,10 +613,10 @@ impl BehaviorNode for AlwaysRunning {
 
 #[test]
 fn test_if_node_suspend() {
-    let mut tree = IfNode::default();
-    tree.add_child(Box::new(AlwaysRunning), BBMap::new())
+    let mut tree = BNContainer::new_node(IfNode::default());
+    tree.add_child(BNContainer::new_node(AlwaysRunning))
         .unwrap();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+    tree.add_child(BNContainer::new_node(AppendAndFail::<true>))
         .unwrap();
 
     let mut ctx = Context::default();
@@ -640,12 +637,12 @@ fn test_if_node_suspend() {
 
 #[test]
 fn test_if_node_true_suspend() {
-    let mut tree = IfNode::default();
-    tree.add_child(Box::new(AlwaysSucceed), BBMap::new())
+    let mut tree = BNContainer::new_node(IfNode::default());
+    tree.add_child(BNContainer::new_node(AlwaysSucceed))
         .unwrap();
-    tree.add_child(Box::new(AlwaysRunning), BBMap::new())
+    tree.add_child(BNContainer::new_node(AlwaysRunning))
         .unwrap();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+    tree.add_child(BNContainer::new_node(AppendAndFail::<true>))
         .unwrap();
 
     let mut ctx = Context::default();
@@ -666,11 +663,11 @@ fn test_if_node_true_suspend() {
 
 #[test]
 fn test_if_node_false_suspend() {
-    let mut tree = IfNode::default();
-    tree.add_child(Box::new(AlwaysFail), BBMap::new()).unwrap();
-    tree.add_child(Box::new(AppendAndFail::<true>), BBMap::new())
+    let mut tree = BNContainer::new_node(IfNode::default());
+    tree.add_child(BNContainer::new_node(AlwaysFail)).unwrap();
+    tree.add_child(BNContainer::new_node(AppendAndFail::<true>))
         .unwrap();
-    tree.add_child(Box::new(AlwaysRunning), BBMap::new())
+    tree.add_child(BNContainer::new_node(AlwaysRunning))
         .unwrap();
 
     let mut ctx = Context::default();

@@ -1,10 +1,9 @@
 use crate::{
-    error::{AddChildError, AddChildResult},
-    BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Blackboard,
-    Context, Lazy, PortSpec, PortType, Symbol,
+    BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Blackboard, Context,
+    Lazy, NumChildren, PortSpec, PortType, Symbol,
 };
 
-pub fn tick_child_node(
+pub fn tick_child_node<T>(
     arg: BehaviorCallback,
     ctx: &mut Context,
     node: &mut BehaviorNodeContainer,
@@ -17,26 +16,14 @@ pub fn tick_child_node(
 
 /// SubtreeNode is a container for a subtree, introducing a local namescope of blackboard variables.
 pub struct SubtreeNode {
-    child: BehaviorNodeContainer,
     /// Blackboard variables needs to be a part of the node payload
     blackboard: Blackboard,
     params: Vec<PortSpec>,
 }
 
 impl SubtreeNode {
-    pub fn new(
-        child: Box<dyn BehaviorNode>,
-        blackboard: Blackboard,
-        params: Vec<PortSpec>,
-    ) -> Self {
-        Self {
-            child: BehaviorNodeContainer {
-                node: child,
-                blackboard_map: BBMap::new(),
-            },
-            blackboard,
-            params,
-        }
+    pub fn new(blackboard: Blackboard, params: Vec<PortSpec>) -> Self {
+        Self { blackboard, params }
     }
 }
 
@@ -55,10 +42,9 @@ impl BehaviorNode for SubtreeNode {
                 self.blackboard.insert(param.key, value.clone());
             }
         }
-        std::mem::swap(&mut ctx.blackboard, &mut self.blackboard);
-        std::mem::swap(&mut ctx.blackboard_map, &mut self.child.blackboard_map);
-        let res = self.child.node.tick(arg, ctx);
-        std::mem::swap(&mut ctx.blackboard_map, &mut self.child.blackboard_map);
+
+        std::mem::swap(&mut self.blackboard, &mut ctx.blackboard);
+        let res = ctx.call_child(0, arg);
         std::mem::swap(&mut ctx.blackboard, &mut self.blackboard);
 
         // It is debatable if we should assign the output value back to the parent blackboard
@@ -73,15 +59,11 @@ impl BehaviorNode for SubtreeNode {
             }
         }
 
-        res
+        res.unwrap_or(BehaviorResult::Fail)
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        self.child = BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        };
-        Ok(())
+    fn num_children(&self) -> NumChildren {
+        NumChildren::Finite(1)
     }
 }
 
@@ -115,12 +97,8 @@ impl BehaviorNode for SequenceNode {
         BehaviorResult::Success
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        self.children.push(BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        });
-        Ok(())
+    fn num_children(&self) -> NumChildren {
+        NumChildren::Infinite
     }
 }
 
@@ -149,12 +127,8 @@ impl BehaviorNode for ReactiveSequenceNode {
         BehaviorResult::Success
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        self.children.push(BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        });
-        Ok(())
+    fn num_children(&self) -> NumChildren {
+        NumChildren::Infinite
     }
 }
 
@@ -188,12 +162,8 @@ impl BehaviorNode for FallbackNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        self.children.push(BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        });
-        Ok(())
+    fn num_children(&self) -> NumChildren {
+        NumChildren::Infinite
     }
 }
 
@@ -222,12 +192,8 @@ impl BehaviorNode for ReactiveFallbackNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        self.children.push(BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        });
-        Ok(())
+    fn num_children(&self) -> NumChildren {
+        NumChildren::Infinite
     }
 }
 
@@ -249,16 +215,8 @@ impl BehaviorNode for ForceSuccessNode {
         }
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        if self.0.is_none() {
-            self.0 = Some(BehaviorNodeContainer {
-                node,
-                blackboard_map,
-            });
-            Ok(())
-        } else {
-            Err(AddChildError::TooManyNodes)
-        }
+    fn num_children(&self) -> NumChildren {
+        NumChildren::Finite(1)
     }
 }
 
@@ -280,16 +238,8 @@ impl BehaviorNode for ForceFailureNode {
         }
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        if self.0.is_none() {
-            self.0 = Some(BehaviorNodeContainer {
-                node,
-                blackboard_map,
-            });
-            Ok(())
-        } else {
-            Err(AddChildError::TooManyNodes)
-        }
+    fn num_children(&self) -> NumChildren {
+        NumChildren::Finite(1)
     }
 }
 
@@ -312,16 +262,8 @@ impl BehaviorNode for InverterNode {
         }
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        if self.0.is_none() {
-            self.0 = Some(BehaviorNodeContainer {
-                node,
-                blackboard_map,
-            });
-            Ok(())
-        } else {
-            Err(AddChildError::TooManyNodes)
-        }
+    fn num_children(&self) -> NumChildren {
+        NumChildren::Finite(1)
     }
 }
 
@@ -366,15 +308,8 @@ impl BehaviorNode for RepeatNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        if self.child.is_some() {
-            return Err(AddChildError::TooManyNodes);
-        }
-        self.child = Some(BehaviorNodeContainer {
-            node: val,
-            blackboard_map,
-        });
-        Ok(())
+    fn num_children(&self) -> NumChildren {
+        NumChildren::Finite(1)
     }
 }
 
@@ -417,15 +352,8 @@ impl BehaviorNode for RetryNode {
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        if self.child.is_some() {
-            return Err(AddChildError::TooManyNodes);
-        }
-        self.child = Some(BehaviorNodeContainer {
-            node: val,
-            blackboard_map,
-        });
-        Ok(())
+    fn num_children(&self) -> NumChildren {
+        NumChildren::Finite(1)
     }
 }
 
@@ -474,31 +402,15 @@ impl BehaviorNode for IsTrueNode {
 
 #[derive(Default)]
 pub struct IfNode {
-    children: Vec<BehaviorNodeContainer>,
     condition_result: Option<BehaviorResult>,
 }
 
 impl BehaviorNode for IfNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        let mut ticker = |node: &mut BehaviorNodeContainer| {
-            std::mem::swap(&mut node.blackboard_map, &mut ctx.blackboard_map);
-            let res = node.node.tick(arg, ctx);
-            std::mem::swap(&mut node.blackboard_map, &mut ctx.blackboard_map);
-            res
-        };
-
         let condition_result = match self.condition_result {
-            Some(BehaviorResult::Running) => self
-                .children
-                .first_mut()
-                .map(&mut ticker)
-                .unwrap_or(BehaviorResult::Fail),
+            Some(BehaviorResult::Running) => ctx.call_child(0, arg).unwrap_or(BehaviorResult::Fail),
             Some(res) => res,
-            None => self
-                .children
-                .first_mut()
-                .map(&mut ticker)
-                .unwrap_or(BehaviorResult::Fail),
+            None => ctx.call_child(0, arg).unwrap_or(BehaviorResult::Fail),
         };
 
         // Remember the last conditional result in case the child node returns Running
@@ -509,17 +421,10 @@ impl BehaviorNode for IfNode {
         }
 
         let branch_result = match condition_result {
-            BehaviorResult::Success => self
-                .children
-                .get_mut(1)
-                .map(&mut ticker)
-                .unwrap_or(BehaviorResult::Fail),
+            BehaviorResult::Success => ctx.call_child(1, arg).unwrap_or(BehaviorResult::Fail),
             BehaviorResult::Fail => {
                 // Be aware that lack of else clause is not an error, so the result is Success.
-                self.children
-                    .get_mut(2)
-                    .map(&mut ticker)
-                    .unwrap_or(BehaviorResult::Success)
+                ctx.call_child(2, arg).unwrap_or(BehaviorResult::Success)
             }
             BehaviorResult::Running => BehaviorResult::Running,
         };
@@ -533,16 +438,8 @@ impl BehaviorNode for IfNode {
         branch_result
     }
 
-    fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        if self.children.len() < 3 {
-            self.children.push(BehaviorNodeContainer {
-                node: val,
-                blackboard_map,
-            });
-            Ok(())
-        } else {
-            Err(AddChildError::TooManyNodes)
-        }
+    fn num_children(&self) -> NumChildren {
+        NumChildren::Finite(3)
     }
 }
 

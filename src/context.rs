@@ -1,20 +1,44 @@
-use crate::{BBMap, Blackboard, BlackboardValue, PortType, Symbol};
+use crate::{
+    BBMap, BehaviorCallback, BehaviorNodeContainer, BehaviorResult, Blackboard, BlackboardValue,
+    PortType, Symbol,
+};
 use std::{any::Any, rc::Rc, str::FromStr};
 
+/// Our custom wrapper struct to stop propagation of Debug trait macro.
+/// Borrowed the concept from `debug-ignore` crate, but grossly simplified, and without dependency.
+#[derive(Default)]
+pub struct DebugIgnore<T: ?Sized>(pub T);
+
+impl<T: ?Sized> std::fmt::Debug for DebugIgnore<T> {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "...")
+    }
+}
+
+impl<T: ?Sized> std::ops::Deref for DebugIgnore<T> {
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 #[derive(Default, Debug)]
-pub struct Context<'e, T: 'e = ()> {
+pub struct Context {
     pub(crate) blackboard: Blackboard,
     pub(crate) blackboard_map: BBMap,
-    pub env: Option<&'e mut T>,
+    pub(crate) children: DebugIgnore<Vec<BehaviorNodeContainer>>,
     strict: bool,
 }
 
-impl<'e, T> Context<'e, T> {
+impl Context {
     pub fn new(blackboard: Blackboard) -> Self {
         Self {
             blackboard,
             blackboard_map: BBMap::new(),
-            env: None,
+            children: DebugIgnore(vec![]),
             strict: true,
         }
     }
@@ -30,15 +54,24 @@ impl<'e, T> Context<'e, T> {
     pub fn set_strict(&mut self, b: bool) {
         self.strict = b;
     }
+
+    pub fn call_child(&mut self, idx: usize, arg: BehaviorCallback) -> Option<BehaviorResult> {
+        // Take the children temporarily to avoid borrow checker
+        let mut children = std::mem::take(&mut self.children.0);
+        let res = children.get_mut(idx).map(|child| child.tick(arg, self));
+        self.children.0 = children;
+        res
+    }
+
+    pub fn num_children(&self) -> usize {
+        self.children.len()
+    }
 }
 
-impl<'e, E> Context<'e, E> {
+impl Context {
     /// Get a blackboard variable with downcasting to the type argument.
     /// Returns `None` if it fails to downcast.
-    pub fn get<'a, T: 'static>(&'a self, key: impl Into<Symbol>) -> Option<&'a T>
-    where
-        'e: 'a,
-    {
+    pub fn get<'a, T: 'static>(&'a self, key: impl Into<Symbol>) -> Option<&'a T> {
         let key: Symbol = key.into();
         let mapped = self.blackboard_map.get(&key);
         let mapped = match mapped {

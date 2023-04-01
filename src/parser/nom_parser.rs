@@ -234,7 +234,7 @@ impl<'src> TreeDef<'src> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum BlackboardValue<'src> {
-    /// Literal value could have decoded, so it is an owned string.
+    /// Literal value could have been decoded, so it is an owned string.
     Literal(String),
     Ref(&'src str),
 }
