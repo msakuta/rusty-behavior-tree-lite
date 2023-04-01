@@ -65,7 +65,7 @@
 //! ```rust
 //! # use behavior_tree_lite::Context;
 //! # let body = 1;
-//! let mut ctx = Context::<()>::default();
+//! let mut ctx = Context::default();
 //! ctx.set("body", body);
 //! ```
 //!
@@ -78,14 +78,14 @@
 //! # impl BehaviorNode for PrintBodyNode { fn tick(&mut self, _: BehaviorCallback, _: &mut Context) -> BehaviorResult { BehaviorResult::Success }}
 //! # struct PrintArmNode;
 //! # impl BehaviorNode for PrintArmNode { fn tick(&mut self, _: BehaviorCallback, _: &mut Context) -> BehaviorResult { BehaviorResult::Success }}
-//! let mut root = SequenceNode::default();
-//! root.add_child(Box::new(PrintBodyNode), hash_map!());
+//! let mut root = BehaviorNodeContainer::new_node(SequenceNode::default());
+//! root.add_child(BehaviorNodeContainer::new_node(PrintBodyNode));
 //!
-//! let mut print_arms = SequenceNode::default();
-//! print_arms.add_child(Box::new(PrintArmNode), hash_map!("arm" => "left_arm"));
-//! print_arms.add_child(Box::new(PrintArmNode), hash_map!("arm" => "right_arm"));
+//! let mut print_arms = BehaviorNodeContainer::new_node(SequenceNode::default());
+//! print_arms.add_child(BehaviorNodeContainer::new(Box::new(PrintArmNode), hash_map!("arm" => "left_arm")));
+//! print_arms.add_child(BehaviorNodeContainer::new(Box::new(PrintArmNode), hash_map!("arm" => "right_arm")));
 //!
-//! root.add_child(Box::new(print_arms), hash_map!());
+//! root.add_child(print_arms);
 //! ```
 //!
 //! and call `tick()`.
@@ -810,9 +810,11 @@ impl BehaviorNodeContainer {
     }
 
     pub fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
+        std::mem::swap(&mut self.child_nodes, &mut ctx.child_nodes.0);
         std::mem::swap(&mut self.blackboard_map, &mut ctx.blackboard_map);
         let res = self.node.tick(arg, ctx);
         std::mem::swap(&mut self.blackboard_map, &mut ctx.blackboard_map);
+        std::mem::swap(&mut self.child_nodes, &mut ctx.child_nodes.0);
         res
     }
 

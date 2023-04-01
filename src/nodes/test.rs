@@ -373,7 +373,6 @@ struct Countdown<const C: usize>(usize);
 
 impl<const C: usize> BehaviorNode for Countdown<C> {
     fn tick(&mut self, _arg: BehaviorCallback, _ctx: &mut Context) -> BehaviorResult {
-        dbg!(self.0);
         if self.0 == 0 {
             self.0 = C;
             BehaviorResult::Success

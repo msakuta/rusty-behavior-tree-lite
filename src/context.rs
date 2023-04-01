@@ -29,7 +29,7 @@ impl<T: ?Sized> std::ops::Deref for DebugIgnore<T> {
 pub struct Context {
     pub(crate) blackboard: Blackboard,
     pub(crate) blackboard_map: BBMap,
-    pub(crate) children: DebugIgnore<Vec<BehaviorNodeContainer>>,
+    pub(crate) child_nodes: DebugIgnore<Vec<BehaviorNodeContainer>>,
     strict: bool,
 }
 
@@ -38,7 +38,7 @@ impl Context {
         Self {
             blackboard,
             blackboard_map: BBMap::new(),
-            children: DebugIgnore(vec![]),
+            child_nodes: DebugIgnore(vec![]),
             strict: true,
         }
     }
@@ -55,16 +55,16 @@ impl Context {
         self.strict = b;
     }
 
-    pub fn call_child(&mut self, idx: usize, arg: BehaviorCallback) -> Option<BehaviorResult> {
-        // Take the children temporarily to avoid borrow checker
-        let mut children = std::mem::take(&mut self.children.0);
+    pub fn tick_child(&mut self, idx: usize, arg: BehaviorCallback) -> Option<BehaviorResult> {
+        // Take the children temporarily because the context's `child_nodes` will be used by the child node (for grandchildren)
+        let mut children = std::mem::take(&mut self.child_nodes.0);
         let res = children.get_mut(idx).map(|child| child.tick(arg, self));
-        self.children.0 = children;
+        self.child_nodes.0 = children;
         res
     }
 
     pub fn num_children(&self) -> usize {
-        self.children.len()
+        self.child_nodes.len()
     }
 }
 
