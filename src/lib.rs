@@ -670,7 +670,7 @@ mod container;
 mod context;
 pub mod error;
 mod nodes;
-mod parser;
+pub mod parser;
 mod port;
 mod registry;
 mod symbol;
