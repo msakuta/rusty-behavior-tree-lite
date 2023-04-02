@@ -71,7 +71,7 @@ impl Context {
 impl Context {
     /// Get a blackboard variable with downcasting to the type argument.
     /// Returns `None` if it fails to downcast.
-    pub fn get<'a, T: 'static>(&'a self, key: impl Into<Symbol>) -> Option<&'a T> {
+    pub fn get<T: 'static>(&self, key: impl Into<Symbol>) -> Option<&T> {
         let key: Symbol = key.into();
         let mapped = self.blackboard_map.get(&key);
         let mapped = match mapped {
