@@ -1,10 +1,9 @@
 use crate::{
-    error::{AddChildError, AddChildResult},
-    BBMap, BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Blackboard,
-    Context, Lazy, PortSpec, PortType, Symbol,
+    BehaviorCallback, BehaviorNode, BehaviorNodeContainer, BehaviorResult, Blackboard, Context,
+    Lazy, NumChildren, PortSpec, PortType, Symbol,
 };
 
-pub fn tick_child_node(
+pub fn tick_child_node<T>(
     arg: BehaviorCallback,
     ctx: &mut Context,
     node: &mut BehaviorNodeContainer,
@@ -17,26 +16,14 @@ pub fn tick_child_node(
 
 /// SubtreeNode is a container for a subtree, introducing a local namescope of blackboard variables.
 pub struct SubtreeNode {
-    child: BehaviorNodeContainer,
     /// Blackboard variables needs to be a part of the node payload
     blackboard: Blackboard,
     params: Vec<PortSpec>,
 }
 
 impl SubtreeNode {
-    pub fn new(
-        child: Box<dyn BehaviorNode>,
-        blackboard: Blackboard,
-        params: Vec<PortSpec>,
-    ) -> Self {
-        Self {
-            child: BehaviorNodeContainer {
-                node: child,
-                blackboard_map: BBMap::new(),
-            },
-            blackboard,
-            params,
-        }
+    pub fn new(blackboard: Blackboard, params: Vec<PortSpec>) -> Self {
+        Self { blackboard, params }
     }
 }
 
@@ -55,10 +42,9 @@ impl BehaviorNode for SubtreeNode {
                 self.blackboard.insert(param.key, value.clone());
             }
         }
-        std::mem::swap(&mut ctx.blackboard, &mut self.blackboard);
-        std::mem::swap(&mut ctx.blackboard_map, &mut self.child.blackboard_map);
-        let res = self.child.node.tick(arg, ctx);
-        std::mem::swap(&mut ctx.blackboard_map, &mut self.child.blackboard_map);
+
+        std::mem::swap(&mut self.blackboard, &mut ctx.blackboard);
+        let res = ctx.tick_child(0, arg);
         std::mem::swap(&mut ctx.blackboard, &mut self.blackboard);
 
         // It is debatable if we should assign the output value back to the parent blackboard
@@ -73,192 +59,136 @@ impl BehaviorNode for SubtreeNode {
             }
         }
 
-        res
+        res.unwrap_or(BehaviorResult::Fail)
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        self.child = BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        };
-        Ok(())
+    fn max_children(&self) -> NumChildren {
+        NumChildren::Finite(1)
     }
 }
 
 #[derive(Default)]
 pub struct SequenceNode {
-    children: Vec<BehaviorNodeContainer>,
     current_child: Option<usize>,
 }
 
 impl BehaviorNode for SequenceNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         let from = self.current_child.unwrap_or(0);
-        for (i, node) in self.children[from..].iter_mut().enumerate() {
-            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-            match node.node.tick(arg, ctx) {
-                BehaviorResult::Fail => {
-                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+        for i in from..ctx.num_children() {
+            match ctx.tick_child(i, arg) {
+                Some(BehaviorResult::Fail) => {
                     self.current_child = None;
                     return BehaviorResult::Fail;
                 }
-                BehaviorResult::Running => {
-                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-                    self.current_child = Some(i + from);
+                Some(BehaviorResult::Running) => {
+                    self.current_child = Some(i);
                     return BehaviorResult::Running;
                 }
                 _ => (),
             }
-            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
         }
         self.current_child = None;
         BehaviorResult::Success
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        self.children.push(BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        });
-        Ok(())
+    fn max_children(&self) -> NumChildren {
+        NumChildren::Infinite
     }
 }
 
 #[derive(Default)]
-pub struct ReactiveSequenceNode {
-    children: Vec<BehaviorNodeContainer>,
-}
+pub struct ReactiveSequenceNode;
 
 impl BehaviorNode for ReactiveSequenceNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        for node in &mut self.children {
-            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-            match node.node.tick(arg, ctx) {
-                BehaviorResult::Fail => {
-                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+        for i in 0..ctx.num_children() {
+            match ctx.tick_child(i, arg) {
+                Some(BehaviorResult::Fail) => {
                     return BehaviorResult::Fail;
                 }
-                BehaviorResult::Running => {
-                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+                Some(BehaviorResult::Running) => {
                     return BehaviorResult::Running;
                 }
                 _ => (),
             }
-            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
         }
         BehaviorResult::Success
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        self.children.push(BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        });
-        Ok(())
+    fn max_children(&self) -> NumChildren {
+        NumChildren::Infinite
     }
 }
 
 #[derive(Default)]
 pub struct FallbackNode {
-    children: Vec<BehaviorNodeContainer>,
     current_child: Option<usize>,
 }
 
 impl BehaviorNode for FallbackNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
         let from = self.current_child.unwrap_or(0);
-        for (i, node) in self.children[from..].iter_mut().enumerate() {
-            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-            match node.node.tick(arg, ctx) {
-                BehaviorResult::Success => {
-                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+        for i in from..ctx.num_children() {
+            match ctx.tick_child(i, arg) {
+                Some(BehaviorResult::Success) => {
                     self.current_child = None;
                     return BehaviorResult::Success;
                 }
-                BehaviorResult::Running => {
-                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-                    self.current_child = Some(i + from);
+                Some(BehaviorResult::Running) => {
+                    self.current_child = Some(i);
                     return BehaviorResult::Running;
                 }
                 _ => (),
             }
-            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
         }
         self.current_child = None;
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        self.children.push(BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        });
-        Ok(())
+    fn max_children(&self) -> NumChildren {
+        NumChildren::Infinite
     }
 }
 
 #[derive(Default)]
-pub struct ReactiveFallbackNode {
-    children: Vec<BehaviorNodeContainer>,
-}
+pub struct ReactiveFallbackNode;
 
 impl BehaviorNode for ReactiveFallbackNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        for node in &mut self.children {
-            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-            match node.node.tick(arg, ctx) {
-                BehaviorResult::Success => {
-                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+        for i in 0..ctx.num_children() {
+            match ctx.tick_child(i, arg) {
+                Some(BehaviorResult::Success) => {
                     return BehaviorResult::Success;
                 }
-                BehaviorResult::Running => {
-                    std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
+                Some(BehaviorResult::Running) => {
                     return BehaviorResult::Running;
                 }
                 _ => (),
             }
-            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
         }
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        self.children.push(BehaviorNodeContainer {
-            node,
-            blackboard_map,
-        });
-        Ok(())
+    fn max_children(&self) -> NumChildren {
+        NumChildren::Infinite
     }
 }
 
 #[derive(Default)]
-pub struct ForceSuccessNode(Option<BehaviorNodeContainer>);
+pub struct ForceSuccessNode;
 
 impl BehaviorNode for ForceSuccessNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        if let Some(ref mut node) = self.0 {
-            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-            if let BehaviorResult::Running = node.node.tick(arg, ctx) {
-                std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-                return BehaviorResult::Running;
-            }
-            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-            BehaviorResult::Success
-        } else {
-            BehaviorResult::Fail
+        match ctx.tick_child(0, arg) {
+            Some(BehaviorResult::Running) => BehaviorResult::Running,
+            Some(_) => BehaviorResult::Success,
+            _ => BehaviorResult::Fail,
         }
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        if self.0.is_none() {
-            self.0 = Some(BehaviorNodeContainer {
-                node,
-                blackboard_map,
-            });
-            Ok(())
-        } else {
-            Err(AddChildError::TooManyNodes)
-        }
+    fn max_children(&self) -> NumChildren {
+        NumChildren::Finite(1)
     }
 }
 
@@ -280,48 +210,26 @@ impl BehaviorNode for ForceFailureNode {
         }
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        if self.0.is_none() {
-            self.0 = Some(BehaviorNodeContainer {
-                node,
-                blackboard_map,
-            });
-            Ok(())
-        } else {
-            Err(AddChildError::TooManyNodes)
-        }
+    fn max_children(&self) -> NumChildren {
+        NumChildren::Finite(1)
     }
 }
 
 #[derive(Default)]
-pub struct InverterNode(Option<BehaviorNodeContainer>);
+pub struct InverterNode;
 
 impl BehaviorNode for InverterNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        if let Some(ref mut node) = self.0 {
-            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-            let res = match node.node.tick(arg, ctx) {
-                BehaviorResult::Running => BehaviorResult::Running,
-                BehaviorResult::Success => BehaviorResult::Fail,
-                BehaviorResult::Fail => BehaviorResult::Success,
-            };
-            std::mem::swap(&mut ctx.blackboard_map, &mut node.blackboard_map);
-            res
-        } else {
-            BehaviorResult::Fail
+        match ctx.tick_child(0, arg) {
+            Some(BehaviorResult::Running) => BehaviorResult::Running,
+            Some(BehaviorResult::Success) => BehaviorResult::Fail,
+            Some(BehaviorResult::Fail) => BehaviorResult::Success,
+            None => BehaviorResult::Fail,
         }
     }
 
-    fn add_child(&mut self, node: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        if self.0.is_none() {
-            self.0 = Some(BehaviorNodeContainer {
-                node,
-                blackboard_map,
-            });
-            Ok(())
-        } else {
-            Err(AddChildError::TooManyNodes)
-        }
+    fn max_children(&self) -> NumChildren {
+        NumChildren::Finite(1)
     }
 }
 
@@ -330,7 +238,6 @@ static N: Lazy<Symbol> = Lazy::new(|| "n".into());
 #[derive(Default)]
 pub(super) struct RepeatNode {
     n: Option<usize>,
-    child: Option<BehaviorNodeContainer>,
 }
 
 impl BehaviorNode for RepeatNode {
@@ -339,49 +246,35 @@ impl BehaviorNode for RepeatNode {
     }
 
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        if let Some((current, child)) = self
-            .n
-            .or_else(|| ctx.get_parse::<usize>("n"))
-            .zip(self.child.as_mut())
-        {
+        if let Some(current) = self.n.or_else(|| ctx.get_parse::<usize>("n")) {
             if current == 0 {
                 self.n = None;
                 return BehaviorResult::Success;
             }
-            std::mem::swap(&mut ctx.blackboard_map, &mut child.blackboard_map);
-            let res = child.node.tick(arg, ctx);
-            std::mem::swap(&mut ctx.blackboard_map, &mut child.blackboard_map);
-            match res {
-                BehaviorResult::Success => {
+            match ctx.tick_child(0, arg) {
+                Some(BehaviorResult::Success) => {
                     self.n = Some(current - 1);
                     return BehaviorResult::Running;
                 }
-                BehaviorResult::Running => return res,
-                _ => {
+                Some(BehaviorResult::Running) => return BehaviorResult::Running,
+                Some(res) => {
                     self.n = None;
                     return res;
                 }
+                _ => return BehaviorResult::Fail,
             }
         }
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        if self.child.is_some() {
-            return Err(AddChildError::TooManyNodes);
-        }
-        self.child = Some(BehaviorNodeContainer {
-            node: val,
-            blackboard_map,
-        });
-        Ok(())
+    fn max_children(&self) -> NumChildren {
+        NumChildren::Finite(1)
     }
 }
 
 #[derive(Default)]
 pub(super) struct RetryNode {
     n: Option<usize>,
-    child: Option<BehaviorNodeContainer>,
 }
 
 impl BehaviorNode for RetryNode {
@@ -390,42 +283,29 @@ impl BehaviorNode for RetryNode {
     }
 
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        if let Some((current, child)) = self
-            .n
-            .or_else(|| ctx.get_parse::<usize>("n"))
-            .zip(self.child.as_mut())
-        {
+        if let Some(current) = self.n.or_else(|| ctx.get_parse::<usize>("n")) {
             if current == 0 {
                 self.n = None;
                 return BehaviorResult::Success;
             }
-            std::mem::swap(&mut ctx.blackboard_map, &mut child.blackboard_map);
-            let res = child.node.tick(arg, ctx);
-            std::mem::swap(&mut ctx.blackboard_map, &mut child.blackboard_map);
-            match res {
-                BehaviorResult::Fail => {
+            match ctx.tick_child(0, arg) {
+                Some(BehaviorResult::Fail) => {
                     self.n = Some(current - 1);
                     return BehaviorResult::Running;
                 }
-                BehaviorResult::Running => return res,
-                _ => {
+                Some(BehaviorResult::Running) => return BehaviorResult::Running,
+                Some(res) => {
                     self.n = None;
                     return res;
                 }
+                _ => return BehaviorResult::Fail,
             }
         }
         BehaviorResult::Fail
     }
 
-    fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        if self.child.is_some() {
-            return Err(AddChildError::TooManyNodes);
-        }
-        self.child = Some(BehaviorNodeContainer {
-            node: val,
-            blackboard_map,
-        });
-        Ok(())
+    fn max_children(&self) -> NumChildren {
+        NumChildren::Finite(1)
     }
 }
 
@@ -474,31 +354,15 @@ impl BehaviorNode for IsTrueNode {
 
 #[derive(Default)]
 pub struct IfNode {
-    children: Vec<BehaviorNodeContainer>,
     condition_result: Option<BehaviorResult>,
 }
 
 impl BehaviorNode for IfNode {
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult {
-        let mut ticker = |node: &mut BehaviorNodeContainer| {
-            std::mem::swap(&mut node.blackboard_map, &mut ctx.blackboard_map);
-            let res = node.node.tick(arg, ctx);
-            std::mem::swap(&mut node.blackboard_map, &mut ctx.blackboard_map);
-            res
-        };
-
         let condition_result = match self.condition_result {
-            Some(BehaviorResult::Running) => self
-                .children
-                .first_mut()
-                .map(&mut ticker)
-                .unwrap_or(BehaviorResult::Fail),
+            Some(BehaviorResult::Running) => ctx.tick_child(0, arg).unwrap_or(BehaviorResult::Fail),
             Some(res) => res,
-            None => self
-                .children
-                .first_mut()
-                .map(&mut ticker)
-                .unwrap_or(BehaviorResult::Fail),
+            None => ctx.tick_child(0, arg).unwrap_or(BehaviorResult::Fail),
         };
 
         // Remember the last conditional result in case the child node returns Running
@@ -509,17 +373,10 @@ impl BehaviorNode for IfNode {
         }
 
         let branch_result = match condition_result {
-            BehaviorResult::Success => self
-                .children
-                .get_mut(1)
-                .map(&mut ticker)
-                .unwrap_or(BehaviorResult::Fail),
+            BehaviorResult::Success => ctx.tick_child(1, arg).unwrap_or(BehaviorResult::Fail),
             BehaviorResult::Fail => {
                 // Be aware that lack of else clause is not an error, so the result is Success.
-                self.children
-                    .get_mut(2)
-                    .map(&mut ticker)
-                    .unwrap_or(BehaviorResult::Success)
+                ctx.tick_child(2, arg).unwrap_or(BehaviorResult::Success)
             }
             BehaviorResult::Running => BehaviorResult::Running,
         };
@@ -533,16 +390,8 @@ impl BehaviorNode for IfNode {
         branch_result
     }
 
-    fn add_child(&mut self, val: Box<dyn BehaviorNode>, blackboard_map: BBMap) -> AddChildResult {
-        if self.children.len() < 3 {
-            self.children.push(BehaviorNodeContainer {
-                node: val,
-                blackboard_map,
-            });
-            Ok(())
-        } else {
-            Err(AddChildError::TooManyNodes)
-        }
+    fn max_children(&self) -> NumChildren {
+        NumChildren::Finite(3)
     }
 }
 

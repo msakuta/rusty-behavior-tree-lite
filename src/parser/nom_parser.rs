@@ -25,10 +25,18 @@ impl<'src> NodeDef<'src> {
             ports: Vec::new(),
         }
     }
+
+    pub fn name(&self) -> &str {
+        self.name
+    }
+
+    pub fn ports(&self) -> &[PortDef<'src>] {
+        &self.ports
+    }
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct PortDef<'src> {
+pub struct PortDef<'src> {
     pub direction: PortType,
     pub name: &'src str,
     pub ty: Option<&'src str>,
@@ -117,6 +125,20 @@ pub struct TreeDef<'src> {
     pub(crate) port_maps: Vec<PortMap<'src>>,
     pub(crate) children: Vec<TreeDef<'src>>,
     pub(crate) vars: Vec<VarDef<'src>>,
+}
+
+impl<'src> TreeDef<'src> {
+    pub fn get_type(&self) -> &str {
+        self.ty
+    }
+
+    pub fn port_maps(&self) -> &[PortMap<'src>] {
+        &self.port_maps
+    }
+
+    pub fn children(&self) -> &[TreeDef<'src>] {
+        &self.children
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -234,7 +256,7 @@ impl<'src> TreeDef<'src> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum BlackboardValue<'src> {
-    /// Literal value could have decoded, so it is an owned string.
+    /// Literal value could have been decoded, so it is an owned string.
     Literal(String),
     Ref(&'src str),
 }
@@ -244,6 +266,20 @@ pub struct PortMap<'src> {
     pub(crate) ty: PortType,
     pub(crate) node_port: &'src str,
     pub(crate) blackboard_value: BlackboardValue<'src>,
+}
+
+impl<'src> PortMap<'src> {
+    pub fn get_type(&self) -> PortType {
+        self.ty
+    }
+
+    pub fn node_port(&self) -> &'src str {
+        self.node_port
+    }
+
+    pub fn blackboard_value(&self) -> &BlackboardValue<'src> {
+        &self.blackboard_value
+    }
 }
 
 fn subtree_ports_def(i: &str) -> IResult<&str, Vec<PortDef>> {
@@ -260,6 +296,20 @@ pub struct TreeRootDef<'src> {
     pub(crate) name: &'src str,
     pub(crate) root: TreeDef<'src>,
     pub(crate) ports: Vec<PortDef<'src>>,
+}
+
+impl<'src> TreeRootDef<'src> {
+    pub fn name(&self) -> &str {
+        self.name
+    }
+
+    pub fn root(&self) -> &TreeDef<'src> {
+        &self.root
+    }
+
+    pub fn ports(&self) -> &[PortDef<'src>] {
+        &self.ports
+    }
 }
 
 fn parse_tree(i: &str) -> IResult<&str, TreeRootDef> {

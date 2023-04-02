@@ -5,38 +5,15 @@
 //!
 //! ## Overview
 //!
-//! This is a sister project of [tiny-behavior-tree](https://github.com/msakuta/rusty_tiny_behavior_tree) which in turn inspired by [BehaviorTreeCPP](https://github.com/BehaviorTree/BehaviorTree.CPP.git).
+//! This is an implementation of behavior tree in Rust, inspired by [BehaviorTreeCPP](https://github.com/BehaviorTree/BehaviorTree.CPP.git).
 //!
-//! While tiny-behavior-tree aims for more innovative design and experimental features, this crate aims for more traditional behavior tree implementation.
-//! However, we are not going to implement advanced features such as asynchronous nodes or coroutines.
-//! My goal is to make a crate lightweight enough to use in WebAssembly.
+//! A behavior tree is an extension to finite state machines that makes describing transitional behavior easier.
+//! See [BehaviorTreeCPP's documentation](https://www.behaviortree.dev/) for the thorough introduction to the idea.
 //!
-//! ## The difference from tiny-behavior-tree
+//! See the historical notes at the bottom of this README.md for more full history.
 //!
-//! The main premise of tiny-behavior-tree is that it passes data with function arguments.
-//! This is very good for making fast and small binary, but it suffers from mixed node types in a tree.
-//!
-//! It requires ugly boilerplate code or macros to convert types between different node argument types, and there is the concept of "PeelNode" which would be unnecessary in traditional behavior tree design.
-//!
-//! On top of that, uniform types make it much easier to implement configuration file parser that can change the behavior tree at runtime.
-//!
-//!
-//! ## Performance consideration
-//!
-//! One of the issues with behavior tree in general regarding performance is that the nodes communicate with blackboard variables, which is essentially a key-value store.
-//! It is not particularly bad, but if you read/write a lot of variables in the blackboard (which easily happens with a large behavior tree), you would pay the cost of constructing a string and looking up HashMap every time.
-//!
-//! One of the tiny-behavior-tree's goals is to address this issue by passing variables with function call arguments.
-//! Why would you pay the cost of looking up HashMap if you already know the address of the variable?
-//!
-//! Also, the blackboard is not very scalable, since it is essentially a huge table of global variables.
-//! Although there is sub-blackboards in subtrees, it is difficult to keep track of similar to scripting language's stack frame without proper debugging tools.
-//!
-//! I might experiment with non-string keys to make it more efficient, but the nature of the variables need to be handled dynamically in uniformly typeds nodes.
 //!
 //! ## How it looks like
-//!
-//! The usage is very similar to TinyBehaviorTree.
 //!
 //! First, you define the state with a data structure.
 //!
@@ -65,7 +42,7 @@
 //! ```rust
 //! # use behavior_tree_lite::Context;
 //! # let body = 1;
-//! let mut ctx = Context::<()>::default();
+//! let mut ctx = Context::default();
 //! ctx.set("body", body);
 //! ```
 //!
@@ -78,14 +55,14 @@
 //! # impl BehaviorNode for PrintBodyNode { fn tick(&mut self, _: BehaviorCallback, _: &mut Context) -> BehaviorResult { BehaviorResult::Success }}
 //! # struct PrintArmNode;
 //! # impl BehaviorNode for PrintArmNode { fn tick(&mut self, _: BehaviorCallback, _: &mut Context) -> BehaviorResult { BehaviorResult::Success }}
-//! let mut root = SequenceNode::default();
-//! root.add_child(Box::new(PrintBodyNode), hash_map!());
+//! let mut root = BehaviorNodeContainer::new_node(SequenceNode::default());
+//! root.add_child(BehaviorNodeContainer::new_node(PrintBodyNode));
 //!
-//! let mut print_arms = SequenceNode::default();
-//! print_arms.add_child(Box::new(PrintArmNode), hash_map!("arm" => "left_arm"));
-//! print_arms.add_child(Box::new(PrintArmNode), hash_map!("arm" => "right_arm"));
+//! let mut print_arms = BehaviorNodeContainer::new_node(SequenceNode::default());
+//! print_arms.add_child(BehaviorNodeContainer::new(Box::new(PrintArmNode), hash_map!("arm" => "left_arm")));
+//! print_arms.add_child(BehaviorNodeContainer::new(Box::new(PrintArmNode), hash_map!("arm" => "right_arm")));
 //!
-//! root.add_child(Box::new(print_arms), hash_map!());
+//! root.add_child(print_arms);
 //! ```
 //!
 //! and call `tick()`.
@@ -627,7 +604,7 @@
 //!
 //! tree-port-name = identifier
 //!
-//! node = if-syntax | conditional | var-def-syntax
+//! node = if-syntax | conditional | var-def-syntax | var-assign
 //!
 //! if-syntax = "if" "(" conditional ")"
 //!
@@ -649,6 +626,8 @@
 //!
 //! var-def-syntax = "var" identifier "=" initializer
 //!
+//! var-assign = identifier "=" initializer
+//!
 //! initializer = "true" | "false"
 //! ```
 //!
@@ -665,11 +644,41 @@
 //!   * [x] Programming language-like flow control syntax
 //! * [ ] Static type checking for behavior tree definition file
 //!
+//! # Historical notes
+//!
+//! This is a sister project of [tiny-behavior-tree](https://github.com/msakuta/rusty_tiny_behavior_tree) which in turn inspired by [BehaviorTreeCPP](https://github.com/BehaviorTree/BehaviorTree.CPP.git).
+//!
+//! While tiny-behavior-tree aims for more innovative design and experimental features, this crate aims for more traditional behavior tree implementation.
+//! The goal is to make a crate lightweight enough to use in WebAssembly.
+//!
+//! ## The difference from tiny-behavior-tree
+//!
+//! The main premise of tiny-behavior-tree is that it passes data with function arguments.
+//! This is very good for making fast and small binary, but it suffers from mixed node types in a tree.
+//!
+//! It requires ugly boilerplate code or macros to convert types between different node argument types, and there is the concept of "PeelNode" which would be unnecessary in traditional behavior tree design.
+//!
+//! On top of that, uniform types make it much easier to implement configuration file parser that can change the behavior tree at runtime.
+//!
+//!
+//! ## Performance consideration
+//!
+//! One of the issues with behavior tree in general regarding performance is that the nodes communicate with blackboard variables, which is essentially a key-value store.
+//! It is not particularly bad, but if you read/write a lot of variables in the blackboard (which easily happens with a large behavior tree), you would pay the cost of constructing a string and looking up HashMap every time.
+//!
+//! One of the tiny-behavior-tree's goals is to address this issue by passing variables with function call arguments.
+//! Why would you pay the cost of looking up HashMap if you already know the address of the variable?
+//!
+//! Also, the blackboard is not very scalable, since it is essentially a huge table of global variables.
+//! Although there is sub-blackboards in subtrees, it is difficult to keep track of similar to scripting language's stack frame without proper debugging tools.
+//!
+//! I might experiment with non-string keys to make it more efficient, but the nature of the variables need to be handled dynamically in uniformly typeds nodes.
 
+mod container;
 mod context;
 pub mod error;
 mod nodes;
-mod parser;
+pub mod parser;
 mod port;
 mod registry;
 mod symbol;
@@ -678,6 +687,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+pub use crate::container::BehaviorNodeContainer;
 pub use crate::context::Context;
 pub use crate::nodes::{tick_child_node, FallbackNode, SequenceNode};
 pub use crate::symbol::Symbol;
@@ -687,7 +697,6 @@ pub use crate::{
     registry::{boxify, Constructor, Registry},
 };
 pub use ::once_cell::sync::*;
-use error::{AddChildError, AddChildResult};
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum BehaviorResult {
@@ -746,6 +755,23 @@ pub type Blackboard = HashMap<Symbol, Rc<dyn Any>>;
 pub type BBMap = HashMap<Symbol, BlackboardValue>;
 pub type BehaviorCallback<'a> = &'a mut dyn FnMut(&dyn Any) -> Option<Box<dyn Any>>;
 
+#[derive(PartialEq, Eq)]
+pub enum NumChildren {
+    Finite(usize),
+    Infinite,
+}
+
+impl PartialOrd for NumChildren {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(match (self, other) {
+            (NumChildren::Finite(_), NumChildren::Infinite) => std::cmp::Ordering::Less,
+            (NumChildren::Infinite, NumChildren::Finite(_)) => std::cmp::Ordering::Greater,
+            (NumChildren::Finite(lhs), NumChildren::Finite(rhs)) => lhs.cmp(rhs),
+            (NumChildren::Infinite, NumChildren::Infinite) => return None,
+        })
+    }
+}
+
 pub trait BehaviorNode {
     fn provided_ports(&self) -> Vec<PortSpec> {
         vec![]
@@ -753,25 +779,8 @@ pub trait BehaviorNode {
 
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult;
 
-    fn add_child(&mut self, _val: Box<dyn BehaviorNode>, _blackboard_map: BBMap) -> AddChildResult {
-        Err(AddChildError::TooManyNodes)
-    }
-}
-
-pub struct BehaviorNodeContainer {
-    node: Box<dyn BehaviorNode>,
-    blackboard_map: HashMap<Symbol, BlackboardValue>,
-}
-
-impl BehaviorNodeContainer {
-    pub fn new(
-        node: Box<dyn BehaviorNode>,
-        blackboard_map: HashMap<Symbol, BlackboardValue>,
-    ) -> Self {
-        Self {
-            node,
-            blackboard_map,
-        }
+    fn max_children(&self) -> NumChildren {
+        NumChildren::Finite(0)
     }
 }
 
