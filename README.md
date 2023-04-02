@@ -51,14 +51,14 @@ Then, you define a behavior tree.
 Note that `add_child` method takes a mapping of blackboard variables as the second argument.
 
 ```rust
-let mut root = SequenceNode::default();
-root.add_child(Box::new(PrintBodyNode), hash_map!());
+let mut root = BehaviorNodeContainer::new_node(SequenceNode::default());
+root.add_child(BehaviorNodeContainer::new_node(PrintBodyNode));
 
-let mut print_arms = SequenceNode::default();
-print_arms.add_child(Box::new(PrintArmNode), hash_map!("arm" => "left_arm"));
-print_arms.add_child(Box::new(PrintArmNode), hash_map!("arm" => "right_arm"));
+let mut print_arms = BehaviorNodeContainer::new_node(SequenceNode::default());
+print_arms.add_child(BehaviorNodeContainer::new(Box::new(PrintArmNode), hash_map!("arm" => "left_arm")));
+print_arms.add_child(BehaviorNodeContainer::new(Box::new(PrintArmNode), hash_map!("arm" => "right_arm")));
 
-root.add_child(Box::new(print_arms), hash_map!());
+root.add_child(print_arms);
 ```
 
 and call `tick()`.
