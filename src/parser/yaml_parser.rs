@@ -26,7 +26,7 @@ fn recurse_parse(value: &serde_yaml::Value, reg: &Registry) -> ParseResult {
     if let Some(Value::Sequence(children)) = value.get(&Value::from("children")) {
         for child in children {
             if let Some(built_child) = recurse_parse(child, reg)? {
-                if NumChildren::Finite(child_nodes.len()) < node.num_children() {
+                if NumChildren::Finite(child_nodes.len()) < node.max_children() {
                     child_nodes.push(built_child)
                 } else {
                     return Err(LoadYamlError::AddChildError(AddChildError::TooManyNodes));

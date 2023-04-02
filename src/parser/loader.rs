@@ -212,7 +212,7 @@ fn load_recurse(
         }
 
         if let Some(new_node) = new_node {
-            if NumChildren::Finite(ret.child_nodes.len()) < ret.node.num_children() {
+            if NumChildren::Finite(ret.child_nodes.len()) < ret.node.max_children() {
                 ret.child_nodes.push(new_node);
             } else {
                 return Err(LoadError::AddChildError(

@@ -49,7 +49,7 @@ impl BehaviorNodeContainer {
     }
 
     pub fn add_child(&mut self, child: BehaviorNodeContainer) -> AddChildResult {
-        if NumChildren::Finite(self.child_nodes.len()) < self.node.num_children() {
+        if NumChildren::Finite(self.child_nodes.len()) < self.node.max_children() {
             self.child_nodes.push(child);
             Ok(())
         } else {

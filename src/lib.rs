@@ -779,7 +779,7 @@ pub trait BehaviorNode {
 
     fn tick(&mut self, arg: BehaviorCallback, ctx: &mut Context) -> BehaviorResult;
 
-    fn num_children(&self) -> NumChildren {
+    fn max_children(&self) -> NumChildren {
         NumChildren::Finite(0)
     }
 }

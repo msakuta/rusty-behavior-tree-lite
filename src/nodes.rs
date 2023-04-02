@@ -62,7 +62,7 @@ impl BehaviorNode for SubtreeNode {
         res.unwrap_or(BehaviorResult::Fail)
     }
 
-    fn num_children(&self) -> NumChildren {
+    fn max_children(&self) -> NumChildren {
         NumChildren::Finite(1)
     }
 }
@@ -92,7 +92,7 @@ impl BehaviorNode for SequenceNode {
         BehaviorResult::Success
     }
 
-    fn num_children(&self) -> NumChildren {
+    fn max_children(&self) -> NumChildren {
         NumChildren::Infinite
     }
 }
@@ -116,7 +116,7 @@ impl BehaviorNode for ReactiveSequenceNode {
         BehaviorResult::Success
     }
 
-    fn num_children(&self) -> NumChildren {
+    fn max_children(&self) -> NumChildren {
         NumChildren::Infinite
     }
 }
@@ -146,7 +146,7 @@ impl BehaviorNode for FallbackNode {
         BehaviorResult::Fail
     }
 
-    fn num_children(&self) -> NumChildren {
+    fn max_children(&self) -> NumChildren {
         NumChildren::Infinite
     }
 }
@@ -170,7 +170,7 @@ impl BehaviorNode for ReactiveFallbackNode {
         BehaviorResult::Fail
     }
 
-    fn num_children(&self) -> NumChildren {
+    fn max_children(&self) -> NumChildren {
         NumChildren::Infinite
     }
 }
@@ -187,7 +187,7 @@ impl BehaviorNode for ForceSuccessNode {
         }
     }
 
-    fn num_children(&self) -> NumChildren {
+    fn max_children(&self) -> NumChildren {
         NumChildren::Finite(1)
     }
 }
@@ -210,7 +210,7 @@ impl BehaviorNode for ForceFailureNode {
         }
     }
 
-    fn num_children(&self) -> NumChildren {
+    fn max_children(&self) -> NumChildren {
         NumChildren::Finite(1)
     }
 }
@@ -228,7 +228,7 @@ impl BehaviorNode for InverterNode {
         }
     }
 
-    fn num_children(&self) -> NumChildren {
+    fn max_children(&self) -> NumChildren {
         NumChildren::Finite(1)
     }
 }
@@ -267,7 +267,7 @@ impl BehaviorNode for RepeatNode {
         BehaviorResult::Fail
     }
 
-    fn num_children(&self) -> NumChildren {
+    fn max_children(&self) -> NumChildren {
         NumChildren::Finite(1)
     }
 }
@@ -304,7 +304,7 @@ impl BehaviorNode for RetryNode {
         BehaviorResult::Fail
     }
 
-    fn num_children(&self) -> NumChildren {
+    fn max_children(&self) -> NumChildren {
         NumChildren::Finite(1)
     }
 }
@@ -390,7 +390,7 @@ impl BehaviorNode for IfNode {
         branch_result
     }
 
-    fn num_children(&self) -> NumChildren {
+    fn max_children(&self) -> NumChildren {
         NumChildren::Finite(3)
     }
 }
