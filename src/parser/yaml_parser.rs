@@ -57,6 +57,8 @@ fn recurse_parse(value: &serde_yaml::Value, reg: &Registry) -> ParseResult {
         blackboard_map,
         child_nodes,
         last_result: None,
+        is_subtree: false,
+        subtree_expanded: std::cell::Cell::new(false),
     }))
 }
 

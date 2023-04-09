@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, cell::Cell};
 
 use crate::{
     error::{AddChildError, AddChildResult},
@@ -12,6 +12,8 @@ pub struct BehaviorNodeContainer {
     pub(crate) blackboard_map: HashMap<Symbol, BlackboardValue>,
     pub(crate) child_nodes: Vec<BehaviorNodeContainer>,
     pub(crate) last_result: Option<BehaviorResult>,
+    pub(crate) is_subtree: bool,
+    pub(crate) subtree_expanded: Cell<bool>,
 }
 
 impl BehaviorNodeContainer {
@@ -25,6 +27,8 @@ impl BehaviorNodeContainer {
             blackboard_map,
             child_nodes: vec![],
             last_result: None,
+            is_subtree: false,
+            subtree_expanded: Cell::new(false),
         }
     }
 
@@ -35,6 +39,8 @@ impl BehaviorNodeContainer {
             blackboard_map: HashMap::new(),
             child_nodes: vec![],
             last_result: None,
+            is_subtree: false,
+            subtree_expanded: Cell::new(false),
         }
     }
 
@@ -45,6 +51,8 @@ impl BehaviorNodeContainer {
             blackboard_map: HashMap::new(),
             child_nodes: vec![],
             last_result: None,
+            is_subtree: false,
+            subtree_expanded: Cell::new(false),
         }
     }
 
@@ -55,6 +63,8 @@ impl BehaviorNodeContainer {
             blackboard_map: HashMap::new(),
             child_nodes: vec![],
             last_result: None,
+            is_subtree: false,
+            subtree_expanded: Cell::new(false),
         }
     }
 
@@ -103,5 +113,17 @@ impl BehaviorNodeContainer {
             }
         }).collect::<Vec<_>>();
         items.into_iter()
+    }
+
+    pub fn is_subtree(&self) -> bool {
+        self.is_subtree
+    }
+
+    pub fn is_subtree_expanded(&self) -> bool {
+        self.subtree_expanded.get()
+    }
+
+    pub fn expand_subtree(&self, b: bool) {
+        self.subtree_expanded.set(b);
     }
 }
