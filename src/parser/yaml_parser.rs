@@ -8,14 +8,14 @@ use std::collections::HashMap;
 type ParseResult = Result<Option<BehaviorNodeContainer>, LoadYamlError>;
 
 fn recurse_parse(value: &serde_yaml::Value, reg: &Registry) -> ParseResult {
-    let node = if let Some(node) =
-        value
-            .get("type")
-            .and_then(|value| value.as_str())
-            .and_then(|value| {
-                eprintln!("Returning {value}");
-                reg.build(value)
-            }) {
+    let Some(name) = value.get("type").and_then(|value| value.as_str()) else {
+        return Ok(None);
+    };
+
+    let node = if let Some(node) = {
+        eprintln!("Returning {name}");
+        reg.build(name)
+    } {
         node
     } else {
         eprintln!("Type does not exist in value {value:?}");
@@ -52,9 +52,11 @@ fn recurse_parse(value: &serde_yaml::Value, reg: &Registry) -> ParseResult {
     };
 
     Ok(Some(BehaviorNodeContainer {
+        name: name.to_owned(),
         node,
         blackboard_map,
         child_nodes,
+        last_result: None,
     }))
 }
 

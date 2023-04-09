@@ -693,7 +693,7 @@ pub use crate::nodes::{tick_child_node, FallbackNode, SequenceNode};
 pub use crate::symbol::Symbol;
 pub use crate::{
     parser::{load, load_yaml, node_def, parse_file, parse_nodes, NodeDef},
-    port::{PortSpec, PortType},
+    port::{PortSpec, PortType, AbstractPortMap, BlackboardValueOwned},
     registry::{boxify, Constructor, Registry},
 };
 pub use ::once_cell::sync::*;

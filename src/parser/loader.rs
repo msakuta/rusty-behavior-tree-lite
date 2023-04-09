@@ -96,11 +96,7 @@ fn load_recurse(
     vars: &mut HashSet<Symbol>,
 ) -> Result<BehaviorNodeContainer, LoadError> {
     let mut ret = if let Some(ret) = registry.build(parent.ty) {
-        BehaviorNodeContainer {
-            node: ret,
-            blackboard_map: HashMap::new(),
-            child_nodes: vec![],
-        }
+        BehaviorNodeContainer::new_raw_with_name(ret, parent.ty.to_string())
     } else {
         let tree = tree_source
             .tree_defs
@@ -132,6 +128,7 @@ fn load_recurse(
             &mut vars,
         )?;
         BehaviorNodeContainer {
+            name: parent.ty.to_owned(),
             node: Box::new(SubtreeNode::new(
                 HashMap::new(),
                 tree.ports
@@ -144,6 +141,7 @@ fn load_recurse(
             )),
             blackboard_map: HashMap::new(),
             child_nodes: vec![loaded_subtree],
+            last_result: None,
         }
     };
 

@@ -2,13 +2,16 @@ use std::collections::HashMap;
 
 use crate::{
     error::{AddChildError, AddChildResult},
-    BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context, NumChildren, Symbol,
+    BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context, NumChildren, Symbol, PortSpec, parser::PortMapOwned,
 };
 
 pub struct BehaviorNodeContainer {
+    /// Name of the type of the node
+    pub(crate) name: String,
     pub(crate) node: Box<dyn BehaviorNode>,
     pub(crate) blackboard_map: HashMap<Symbol, BlackboardValue>,
     pub(crate) child_nodes: Vec<BehaviorNodeContainer>,
+    pub(crate) last_result: Option<BehaviorResult>,
 }
 
 impl BehaviorNodeContainer {
@@ -17,25 +20,41 @@ impl BehaviorNodeContainer {
         blackboard_map: HashMap<Symbol, BlackboardValue>,
     ) -> Self {
         Self {
+            name: "".to_owned(),
             node,
             blackboard_map,
             child_nodes: vec![],
+            last_result: None,
         }
     }
 
     pub fn new_raw(node: Box<dyn BehaviorNode>) -> Self {
         Self {
+            name: "".to_owned(),
             node,
             blackboard_map: HashMap::new(),
             child_nodes: vec![],
+            last_result: None,
         }
     }
 
     pub fn new_node(node: impl BehaviorNode + 'static) -> Self {
         Self {
+            name: "".to_owned(),
             node: Box::new(node),
             blackboard_map: HashMap::new(),
             child_nodes: vec![],
+            last_result: None,
+        }
+    }
+
+    pub(crate) fn new_raw_with_name(node: Box<dyn BehaviorNode>, name: String) -> Self {
+        Self {
+            name,
+            node,
+            blackboard_map: HashMap::new(),
+            child_nodes: vec![],
+            last_result: None,
         }
     }
 
@@ -55,5 +74,34 @@ impl BehaviorNodeContainer {
         } else {
             Err(AddChildError::TooManyNodes)
         }
+    }
+
+    pub fn children(&self) -> &[BehaviorNodeContainer] {
+        &self.child_nodes
+    }
+
+    pub fn last_result(&self) -> Option<BehaviorResult> {
+        self.last_result
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn blackboard_map(&self) -> &HashMap<Symbol, BlackboardValue> {
+        &self.blackboard_map
+    }
+
+    pub fn port_map<'a>(&'a self) -> impl Iterator<Item = PortMapOwned> {
+        let items = self.node.provided_ports().into_iter().filter_map(|port| {
+            if let Some(mapped) = self.blackboard_map.get(&port.key) {
+                Some(PortMapOwned::new(port.ty,
+                    port.key.to_string(), BlackboardValue::to_owned2(&mapped)
+                ))
+            } else {
+                None
+            }
+        }).collect::<Vec<_>>();
+        items.into_iter()
     }
 }
