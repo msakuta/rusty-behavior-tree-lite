@@ -128,7 +128,7 @@ fn load_recurse(
             &mut vars,
         )?;
         BehaviorNodeContainer {
-            name: "Subtree".to_owned(),
+            name: parent.ty.to_owned(),
             node: Box::new(SubtreeNode::new(
                 HashMap::new(),
                 tree.ports
