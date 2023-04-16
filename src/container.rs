@@ -103,21 +103,19 @@ impl BehaviorNodeContainer {
         &self.blackboard_map
     }
 
-    pub fn port_map<'a>(&'a self) -> impl Iterator<Item = PortMapOwned> {
+    pub fn port_map(&self) -> impl Iterator<Item = PortMapOwned> {
         let items = self
             .node
             .provided_ports()
             .into_iter()
             .filter_map(|port| {
-                if let Some(mapped) = self.blackboard_map.get(&port.key) {
-                    Some(PortMapOwned::new(
+                self.blackboard_map.get(&port.key).map(|mapped| {
+                    PortMapOwned::new(
                         port.ty,
                         port.key.to_string(),
-                        BlackboardValue::to_owned2(&mapped),
-                    ))
-                } else {
-                    None
-                }
+                        BlackboardValue::to_owned2(mapped),
+                    )
+                })
             })
             .collect::<Vec<_>>();
         items.into_iter()
