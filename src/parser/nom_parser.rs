@@ -10,7 +10,7 @@ use nom::{
     Finish, IResult,
 };
 
-use crate::PortType;
+use crate::{BlackboardValueOwned, PortType};
 
 #[derive(Debug, PartialEq)]
 pub struct NodeDef<'src> {
@@ -261,6 +261,15 @@ pub enum BlackboardValue<'src> {
     Ref(&'src str),
 }
 
+impl<'src> BlackboardValue<'src> {
+    fn to_owned(&self) -> BlackboardValueOwned {
+        match self {
+            Self::Literal(s) => BlackboardValueOwned::Literal(s.clone()),
+            Self::Ref(s) => BlackboardValueOwned::Ref(s.to_string()),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct PortMap<'src> {
     pub(crate) ty: PortType,
@@ -279,6 +288,31 @@ impl<'src> PortMap<'src> {
 
     pub fn blackboard_value(&self) -> &BlackboardValue<'src> {
         &self.blackboard_value
+    }
+
+    pub fn to_owned(&self) -> PortMapOwned {
+        PortMapOwned {
+            ty: self.ty,
+            node_port: self.node_port.to_owned(),
+            blackboard_value: self.blackboard_value.to_owned(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct PortMapOwned {
+    pub(crate) ty: PortType,
+    pub(crate) node_port: String,
+    pub(crate) blackboard_value: BlackboardValueOwned,
+}
+
+impl PortMapOwned {
+    pub fn new(ty: PortType, node_port: String, blackboard_value: BlackboardValueOwned) -> Self {
+        Self {
+            ty,
+            node_port,
+            blackboard_value,
+        }
     }
 }
 

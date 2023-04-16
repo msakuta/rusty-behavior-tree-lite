@@ -1,14 +1,20 @@
-use std::collections::HashMap;
+use std::{cell::Cell, collections::HashMap};
 
 use crate::{
     error::{AddChildError, AddChildResult},
+    parser::PortMapOwned,
     BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context, NumChildren, Symbol,
 };
 
 pub struct BehaviorNodeContainer {
+    /// Name of the type of the node
+    pub(crate) name: String,
     pub(crate) node: Box<dyn BehaviorNode>,
     pub(crate) blackboard_map: HashMap<Symbol, BlackboardValue>,
     pub(crate) child_nodes: Vec<BehaviorNodeContainer>,
+    pub(crate) last_result: Option<BehaviorResult>,
+    pub(crate) is_subtree: bool,
+    pub(crate) subtree_expanded: Cell<bool>,
 }
 
 impl BehaviorNodeContainer {
@@ -17,25 +23,49 @@ impl BehaviorNodeContainer {
         blackboard_map: HashMap<Symbol, BlackboardValue>,
     ) -> Self {
         Self {
+            name: "".to_owned(),
             node,
             blackboard_map,
             child_nodes: vec![],
+            last_result: None,
+            is_subtree: false,
+            subtree_expanded: Cell::new(false),
         }
     }
 
     pub fn new_raw(node: Box<dyn BehaviorNode>) -> Self {
         Self {
+            name: "".to_owned(),
             node,
             blackboard_map: HashMap::new(),
             child_nodes: vec![],
+            last_result: None,
+            is_subtree: false,
+            subtree_expanded: Cell::new(false),
         }
     }
 
     pub fn new_node(node: impl BehaviorNode + 'static) -> Self {
         Self {
+            name: "".to_owned(),
             node: Box::new(node),
             blackboard_map: HashMap::new(),
             child_nodes: vec![],
+            last_result: None,
+            is_subtree: false,
+            subtree_expanded: Cell::new(false),
+        }
+    }
+
+    pub(crate) fn new_raw_with_name(node: Box<dyn BehaviorNode>, name: String) -> Self {
+        Self {
+            name,
+            node,
+            blackboard_map: HashMap::new(),
+            child_nodes: vec![],
+            last_result: None,
+            is_subtree: false,
+            subtree_expanded: Cell::new(false),
         }
     }
 
@@ -55,5 +85,51 @@ impl BehaviorNodeContainer {
         } else {
             Err(AddChildError::TooManyNodes)
         }
+    }
+
+    pub fn children(&self) -> &[BehaviorNodeContainer] {
+        &self.child_nodes
+    }
+
+    pub fn last_result(&self) -> Option<BehaviorResult> {
+        self.last_result
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn blackboard_map(&self) -> &HashMap<Symbol, BlackboardValue> {
+        &self.blackboard_map
+    }
+
+    pub fn port_map(&self) -> impl Iterator<Item = PortMapOwned> {
+        let items = self
+            .node
+            .provided_ports()
+            .into_iter()
+            .filter_map(|port| {
+                self.blackboard_map.get(&port.key).map(|mapped| {
+                    PortMapOwned::new(
+                        port.ty,
+                        port.key.to_string(),
+                        BlackboardValue::to_owned2(mapped),
+                    )
+                })
+            })
+            .collect::<Vec<_>>();
+        items.into_iter()
+    }
+
+    pub fn is_subtree(&self) -> bool {
+        self.is_subtree
+    }
+
+    pub fn is_subtree_expanded(&self) -> bool {
+        self.subtree_expanded.get()
+    }
+
+    pub fn expand_subtree(&self, b: bool) {
+        self.subtree_expanded.set(b);
     }
 }

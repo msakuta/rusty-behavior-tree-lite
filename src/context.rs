@@ -58,7 +58,11 @@ impl Context {
     pub fn tick_child(&mut self, idx: usize, arg: BehaviorCallback) -> Option<BehaviorResult> {
         // Take the children temporarily because the context's `child_nodes` will be used by the child node (for grandchildren)
         let mut children = std::mem::take(&mut self.child_nodes.0);
-        let res = children.get_mut(idx).map(|child| child.tick(arg, self));
+        let res = children.get_mut(idx).map(|child| {
+            let res = child.tick(arg, self);
+            child.last_result = Some(res);
+            res
+        });
         self.child_nodes.0 = children;
         res
     }
