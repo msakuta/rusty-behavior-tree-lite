@@ -1,4 +1,7 @@
-use crate::{Symbol, parser::{PortMap, BlackboardValue, PortMapOwned}, Blackboard};
+use crate::{
+    parser::{BlackboardValue, PortMap, PortMapOwned},
+    Symbol,
+};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum PortType {
@@ -47,7 +50,7 @@ impl crate::BlackboardValue {
     pub fn to_owned2(&self) -> BlackboardValueOwned {
         match self {
             Self::Literal(s) => BlackboardValueOwned::Literal(s.clone()),
-            Self::Ref(s, _) => BlackboardValueOwned::Ref(s.to_string())
+            Self::Ref(s, _) => BlackboardValueOwned::Ref(s.to_string()),
         }
     }
 }

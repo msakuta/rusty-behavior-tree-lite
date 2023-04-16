@@ -10,7 +10,7 @@ use nom::{
     Finish, IResult,
 };
 
-use crate::{PortType, BlackboardValueOwned, AbstractPortMap};
+use crate::{BlackboardValueOwned, PortType};
 
 #[derive(Debug, PartialEq)]
 pub struct NodeDef<'src> {
@@ -311,7 +311,7 @@ impl PortMapOwned {
         Self {
             ty,
             node_port,
-            blackboard_value
+            blackboard_value,
         }
     }
 }

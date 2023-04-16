@@ -1,8 +1,9 @@
-use std::{collections::HashMap, cell::Cell};
+use std::{cell::Cell, collections::HashMap};
 
 use crate::{
     error::{AddChildError, AddChildResult},
-    BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context, NumChildren, Symbol, PortSpec, parser::PortMapOwned,
+    parser::PortMapOwned,
+    BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context, NumChildren, Symbol,
 };
 
 pub struct BehaviorNodeContainer {
@@ -103,15 +104,22 @@ impl BehaviorNodeContainer {
     }
 
     pub fn port_map<'a>(&'a self) -> impl Iterator<Item = PortMapOwned> {
-        let items = self.node.provided_ports().into_iter().filter_map(|port| {
-            if let Some(mapped) = self.blackboard_map.get(&port.key) {
-                Some(PortMapOwned::new(port.ty,
-                    port.key.to_string(), BlackboardValue::to_owned2(&mapped)
-                ))
-            } else {
-                None
-            }
-        }).collect::<Vec<_>>();
+        let items = self
+            .node
+            .provided_ports()
+            .into_iter()
+            .filter_map(|port| {
+                if let Some(mapped) = self.blackboard_map.get(&port.key) {
+                    Some(PortMapOwned::new(
+                        port.ty,
+                        port.key.to_string(),
+                        BlackboardValue::to_owned2(&mapped),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
         items.into_iter()
     }
 
