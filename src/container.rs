@@ -6,13 +6,19 @@ use crate::{
     BehaviorCallback, BehaviorNode, BehaviorResult, BlackboardValue, Context, NumChildren, Symbol,
 };
 
+#[derive(Clone, Copy, Debug)]
+pub struct LastResult {
+    pub result: BehaviorResult,
+    pub last_time: usize,
+}
+
 pub struct BehaviorNodeContainer {
     /// Name of the type of the node
     pub(crate) name: String,
     pub(crate) node: Box<dyn BehaviorNode>,
     pub(crate) blackboard_map: HashMap<Symbol, BlackboardValue>,
     pub(crate) child_nodes: Vec<BehaviorNodeContainer>,
-    pub(crate) last_result: Option<BehaviorResult>,
+    pub(crate) last_result: Option<LastResult>,
     pub(crate) is_subtree: bool,
     pub(crate) subtree_expanded: Cell<bool>,
 }
@@ -92,7 +98,11 @@ impl BehaviorNodeContainer {
     }
 
     pub fn last_result(&self) -> Option<BehaviorResult> {
-        self.last_result
+        self.last_result.map(|r| r.result)
+    }
+
+    pub fn last_updated(&self) -> Option<usize> {
+        self.last_result.map(|r| r.last_time)
     }
 
     pub fn name(&self) -> &str {

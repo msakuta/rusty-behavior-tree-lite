@@ -1,6 +1,6 @@
 use crate::{
-    BBMap, BehaviorCallback, BehaviorNodeContainer, BehaviorResult, Blackboard, BlackboardValue,
-    PortType, Symbol,
+    container::LastResult, BBMap, BehaviorCallback, BehaviorNodeContainer, BehaviorResult,
+    Blackboard, BlackboardValue, PortType, Symbol,
 };
 use std::{any::Any, rc::Rc, str::FromStr};
 
@@ -31,6 +31,7 @@ pub struct Context {
     pub(crate) blackboard_map: BBMap,
     pub(crate) child_nodes: DebugIgnore<Vec<BehaviorNodeContainer>>,
     strict: bool,
+    global_time: usize,
 }
 
 impl Context {
@@ -40,6 +41,7 @@ impl Context {
             blackboard_map: BBMap::new(),
             child_nodes: DebugIgnore(vec![]),
             strict: true,
+            global_time: 0,
         }
     }
 
@@ -60,7 +62,10 @@ impl Context {
         let mut children = std::mem::take(&mut self.child_nodes.0);
         let res = children.get_mut(idx).map(|child| {
             let res = child.tick(arg, self);
-            child.last_result = Some(res);
+            child.last_result = Some(LastResult {
+                result: res,
+                last_time: self.global_time,
+            });
             res
         });
         self.child_nodes.0 = children;
@@ -70,9 +75,7 @@ impl Context {
     pub fn num_children(&self) -> usize {
         self.child_nodes.len()
     }
-}
 
-impl Context {
     /// Get a blackboard variable with downcasting to the type argument.
     /// Returns `None` if it fails to downcast.
     pub fn get<T: 'static>(&self, key: impl Into<Symbol>) -> Option<&T> {
@@ -165,6 +168,14 @@ impl Context {
             }
             Some(BlackboardValue::Literal(_)) => panic!("Cannot write to a literal!"),
         }
+    }
+
+    pub fn global_time(&self) -> usize {
+        self.global_time
+    }
+
+    pub fn set_global_time(&mut self, global_time: usize) {
+        self.global_time = global_time;
     }
 
     // pub fn get_env(&mut self) -> Option<&mut E> {
