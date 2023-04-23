@@ -160,7 +160,10 @@ fn load_recurse(
                     *INPUT,
                     crate::BlackboardValue::Ref(child.ty.into(), PortType::Input),
                 );
-                Some(BehaviorNodeContainer::new(Box::new(IsTrueNode), bbmap))
+                Some(
+                    BehaviorNodeContainer::new(Box::new(IsTrueNode), bbmap)
+                        .with_name("IsTrue".to_owned()),
+                )
             } else {
                 None
             }
