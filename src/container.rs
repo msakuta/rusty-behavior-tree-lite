@@ -99,6 +99,11 @@ impl BehaviorNodeContainer {
         &self.name
     }
 
+    pub(crate) fn with_name(mut self, name: String) -> Self {
+        self.name = name;
+        self
+    }
+
     pub fn blackboard_map(&self) -> &HashMap<Symbol, BlackboardValue> {
         &self.blackboard_map
     }
