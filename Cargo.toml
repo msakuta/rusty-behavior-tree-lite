@@ -2,8 +2,11 @@
 name = "behavior-tree-lite"
 version = "0.3.1"
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+author = ["msakuta <msakuta960@gmail.com>"]
+description = "A minimal behavior tree implementation"
+license = "MIT"
+repository = "https://github.com/msakuta/rusty-behavior-tree-lite"
+exclude = ["vscode-ext/*", ".github/*"]
 
 [dependencies]
 nom = "7.1.1"
