@@ -1,6 +1,6 @@
 [package]
 name = "behavior-tree-lite"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2018"
 author = ["msakuta <msakuta960@gmail.com>"]
 description = "A minimal behavior tree implementation"
