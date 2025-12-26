@@ -15,8 +15,8 @@ static SYMBOL_HEAP: Lazy<Mutex<HashSet<&'static str>>> = Lazy::new(|| Mutex::new
 
 /// An interned string with O(1) equality.
 #[allow(clippy::derived_hash_with_manual_eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
+#[derive(serde::Serialize)]
+#[serde(transparent)]
 #[derive(Clone, Copy, Eq, Hash)]
 pub struct Symbol {
     s: &'static str,

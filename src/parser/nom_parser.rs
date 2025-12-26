@@ -53,7 +53,7 @@ fn newlines(i: &str) -> IResult<&str, ()> {
     delimited(space0, many1(one_of("\r\n")), space0)(i).map(|(rest, _)| (rest, ()))
 }
 
-fn port_def(i: &str) -> IResult<&str, PortDef> {
+fn port_def(i: &str) -> IResult<&str, PortDef<'_>> {
     let (i, inout) = delimited(space0, alt((tag("in"), tag("out"), tag("inout"))), space0)(i)?;
     let (i, name) = identifier(i)?;
     let (i, ty) = opt(preceded(delimited(space0, char(':'), space0), identifier))(i)?;
@@ -79,7 +79,7 @@ fn port_def(i: &str) -> IResult<&str, PortDef> {
     ))
 }
 
-fn ports_def(i: &str) -> IResult<&str, Vec<PortDef>> {
+fn ports_def(i: &str) -> IResult<&str, Vec<PortDef<'_>>> {
     let (i, _) = many0(newlines)(i)?;
 
     let (i, v) = many0(delimited(space0, port_def, many0(pair(space0, newlines))))(i)?;
@@ -105,7 +105,7 @@ fn close_brace(i: &str) -> IResult<&str, ()> {
     value((), delimited(space0, char('}'), space0))(i)
 }
 
-pub fn node_def(i: &str) -> IResult<&str, NodeDef> {
+pub fn node_def(i: &str) -> IResult<&str, NodeDef<'_>> {
     let (i, _) = delimited(multispace0, tag("node"), space0)(i)?;
 
     let (i, name) = delimited(space0, alphanumeric1, space0)(i)?;
@@ -115,7 +115,7 @@ pub fn node_def(i: &str) -> IResult<&str, NodeDef> {
     Ok((i, NodeDef { name, ports }))
 }
 
-pub fn parse_nodes(i: &str) -> IResult<&str, Vec<NodeDef>> {
+pub fn parse_nodes(i: &str) -> IResult<&str, Vec<NodeDef<'_>>> {
     many0(node_def)(i)
 }
 
@@ -211,7 +211,7 @@ impl<'src> TreeDef<'src> {
         port_maps: Vec<PortMap<'src>>,
         children: Vec<TreeElem<'src>>,
     ) -> Self {
-        fn new_set_bool(name: &str, init: String) -> TreeDef {
+        fn new_set_bool(name: &str, init: String) -> TreeDef<'_> {
             TreeDef::new_with_ports(
                 "SetBool",
                 vec![
@@ -316,7 +316,7 @@ impl PortMapOwned {
     }
 }
 
-fn subtree_ports_def(i: &str) -> IResult<&str, Vec<PortDef>> {
+fn subtree_ports_def(i: &str) -> IResult<&str, Vec<PortDef<'_>>> {
     let (i, ports) = delimited(
         open_paren,
         many0(delimited(space0, port_def, opt(char(',')))),
@@ -346,7 +346,7 @@ impl<'src> TreeRootDef<'src> {
     }
 }
 
-fn parse_tree(i: &str) -> IResult<&str, TreeRootDef> {
+fn parse_tree(i: &str) -> IResult<&str, TreeRootDef<'_>> {
     let (i, _) = delimited(multispace0, tag("tree"), space0)(i)?;
 
     let (i, name) = delimited(space0, identifier, space0)(i)?;
@@ -373,7 +373,7 @@ fn line_comment<T>(i: &str) -> IResult<&str, Option<T>> {
     Ok((i, None))
 }
 
-fn line_comment_tree_elem(i: &str) -> IResult<&str, Option<TreeElem>> {
+fn line_comment_tree_elem(i: &str) -> IResult<&str, Option<TreeElem<'_>>> {
     line_comment::<TreeElem>(i)
 }
 
@@ -391,7 +391,7 @@ enum TreeElem<'src> {
     VarAssign(VarAssign<'src>),
 }
 
-fn tree_children(i: &str) -> IResult<&str, Vec<TreeElem>> {
+fn tree_children(i: &str) -> IResult<&str, Vec<TreeElem<'_>>> {
     let (i, _) = many0(newlines)(i)?;
 
     let (i, v) = many0(delimited(
@@ -411,7 +411,7 @@ fn tree_children(i: &str) -> IResult<&str, Vec<TreeElem>> {
     Ok((i, v.into_iter().flatten().collect()))
 }
 
-fn parse_tree_node(i: &str) -> IResult<&str, TreeDef> {
+fn parse_tree_node(i: &str) -> IResult<&str, TreeDef<'_>> {
     let (i, ty) = delimited(space0, identifier, space0)(i)?;
 
     let (i, input_ports) = opt(delimited(open_paren, port_maps, close_paren))(i)?;
@@ -430,12 +430,12 @@ fn parse_tree_node(i: &str) -> IResult<&str, TreeDef> {
     ))
 }
 
-fn parse_tree_elem(i: &str) -> IResult<&str, TreeElem> {
+fn parse_tree_elem(i: &str) -> IResult<&str, TreeElem<'_>> {
     let (i, elem) = parse_conditional_expr(i)?;
     Ok((i, TreeElem::Node(elem)))
 }
 
-fn parse_conditional_factor(i: &str) -> IResult<&str, TreeDef> {
+fn parse_conditional_factor(i: &str) -> IResult<&str, TreeDef<'_>> {
     let (i, excl) = opt(delimited(space0, char('!'), space0))(i)?;
 
     if excl.is_some() {
@@ -450,7 +450,7 @@ fn parse_conditional_factor(i: &str) -> IResult<&str, TreeDef> {
     }
 }
 
-fn parse_conditional_and(i: &str) -> IResult<&str, TreeDef> {
+fn parse_conditional_and(i: &str) -> IResult<&str, TreeDef<'_>> {
     let (i, children) = separated_list1(tag("&&"), parse_conditional_factor)(i)?;
 
     if children.len() == 1 {
@@ -460,7 +460,7 @@ fn parse_conditional_and(i: &str) -> IResult<&str, TreeDef> {
     }
 }
 
-fn parse_conditional_expr(i: &str) -> IResult<&str, TreeDef> {
+fn parse_conditional_expr(i: &str) -> IResult<&str, TreeDef<'_>> {
     let (i, children) = separated_list1(tag("||"), parse_conditional_and)(i)?;
 
     if children.len() == 1 {
@@ -470,7 +470,7 @@ fn parse_conditional_expr(i: &str) -> IResult<&str, TreeDef> {
     }
 }
 
-fn parse_condition_node(i: &str) -> IResult<&str, TreeElem> {
+fn parse_condition_node(i: &str) -> IResult<&str, TreeElem<'_>> {
     let (i, _ty) = delimited(space0, tag("if"), space0)(i)?;
 
     let (i, condition) = delimited(open_paren, parse_conditional_expr, close_paren)(i)?;
@@ -498,7 +498,7 @@ fn parse_condition_node(i: &str) -> IResult<&str, TreeElem> {
     ))
 }
 
-fn var_decl(i: &str) -> IResult<&str, TreeElem> {
+fn var_decl(i: &str) -> IResult<&str, TreeElem<'_>> {
     let (i, _var) = delimited(space0, tag("var"), space0)(i)?;
 
     let (i, name) = delimited(space0, identifier, space0)(i)?;
@@ -514,7 +514,7 @@ fn var_decl(i: &str) -> IResult<&str, TreeElem> {
     Ok((i, TreeElem::Var(VarDef { name, init })))
 }
 
-fn var_assign(i: &str) -> IResult<&str, TreeElem> {
+fn var_assign(i: &str) -> IResult<&str, TreeElem<'_>> {
     let (i, name) = delimited(space0, identifier, space0)(i)?;
 
     let (i, _) = delimited(space0, char('='), space0)(i)?;
@@ -526,7 +526,7 @@ fn var_assign(i: &str) -> IResult<&str, TreeElem> {
     Ok((i, TreeElem::VarAssign(VarAssign { name, init })))
 }
 
-fn port_maps(i: &str) -> IResult<&str, Vec<PortMap>> {
+fn port_maps(i: &str) -> IResult<&str, Vec<PortMap<'_>>> {
     many0(delimited(
         multispace0,
         port_map,
@@ -534,7 +534,7 @@ fn port_maps(i: &str) -> IResult<&str, Vec<PortMap>> {
     ))(i)
 }
 
-fn port_map(i: &str) -> IResult<&str, PortMap> {
+fn port_map(i: &str) -> IResult<&str, PortMap<'_>> {
     let (i, node_port) = delimited(space0, identifier, space0)(i)?;
 
     let (i, inout) = delimited(space0, alt((tag("<->"), tag("<-"), tag("->"))), space0)(i)?;
@@ -573,12 +573,12 @@ fn port_map(i: &str) -> IResult<&str, PortMap> {
     ))
 }
 
-fn bb_ref(i: &str) -> IResult<&str, BlackboardValue> {
+fn bb_ref(i: &str) -> IResult<&str, BlackboardValue<'_>> {
     let (i, s) = identifier(i)?;
     Ok((i, BlackboardValue::Ref(s)))
 }
 
-fn str_literal(input: &str) -> IResult<&str, BlackboardValue> {
+fn str_literal(input: &str) -> IResult<&str, BlackboardValue<'_>> {
     let (r, val) = delimited(
         preceded(multispace0, char('\"')),
         many0(none_of("\"")),
@@ -595,11 +595,11 @@ fn str_literal(input: &str) -> IResult<&str, BlackboardValue> {
     ))
 }
 
-pub fn parse_file(i: &str) -> Result<(&str, TreeSource), nom::error::Error<&str>> {
+pub fn parse_file(i: &str) -> Result<(&str, TreeSource<'_>), nom::error::Error<&str>> {
     source_text(i).finish()
 }
 
-fn source_text(i: &str) -> IResult<&str, TreeSource> {
+fn source_text(i: &str) -> IResult<&str, TreeSource<'_>> {
     enum NodeOrTree<'src> {
         Node(NodeDef<'src>),
         Tree(TreeRootDef<'src>),
