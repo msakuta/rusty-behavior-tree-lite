@@ -7,7 +7,7 @@ use nom::{
     combinator::{opt, recognize, value},
     multi::{many0, many1, separated_list1},
     sequence::{delimited, pair, preceded, terminated, tuple},
-    Finish, IResult,
+    Finish, IResult, Parser,
 };
 
 use crate::{BlackboardValueOwned, PortType};
@@ -607,14 +607,8 @@ fn source_text(i: &str) -> IResult<&str, TreeSource> {
 
     let (i, stmts) = many0(alt((
         delimited(multispace0, line_comment, newline),
-        some(|i| {
-            let (i, node) = node_def(i)?;
-            Ok((i, NodeOrTree::Node(node)))
-        }),
-        some(|i| {
-            let (i, tree) = parse_tree(i)?;
-            Ok((i, NodeOrTree::Tree(tree)))
-        }),
+        node_def.map(|node| Some(NodeOrTree::Node(node))),
+        parse_tree.map(|tree| Some(NodeOrTree::Tree(tree))),
     )))(i)?;
 
     // Eat up trailing newlines to indicate that the input was thoroughly consumed
