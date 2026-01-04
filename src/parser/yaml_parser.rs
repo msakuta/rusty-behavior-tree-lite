@@ -23,7 +23,7 @@ fn recurse_parse(value: &serde_yaml::Value, reg: &Registry) -> ParseResult {
     };
 
     let mut child_nodes = vec![];
-    if let Some(Value::Sequence(children)) = value.get(&Value::from("children")) {
+    if let Some(Value::Sequence(children)) = value.get(Value::from("children")) {
         for child in children {
             if let Some(built_child) = recurse_parse(child, reg)? {
                 if NumChildren::Finite(child_nodes.len()) < node.max_children() {
@@ -35,7 +35,7 @@ fn recurse_parse(value: &serde_yaml::Value, reg: &Registry) -> ParseResult {
         }
     }
 
-    let blackboard_map = if let Some(Value::Mapping(ports)) = value.get(&Value::from("ports")) {
+    let blackboard_map = if let Some(Value::Mapping(ports)) = value.get(Value::from("ports")) {
         ports
             .iter()
             .filter_map(|(key, value)| {
@@ -84,7 +84,7 @@ pub fn load_yaml(
                         name.as_str().ok_or(LoadYamlError::Missing)?.to_string(),
                         recurse_parse(value, reg)?
                             .map(|v| v.node)
-                            .ok_or_else(|| LoadYamlError::Missing)?,
+                            .ok_or(LoadYamlError::Missing)?,
                     ))
                 })
                 .collect::<Result<_, LoadYamlError>>();
